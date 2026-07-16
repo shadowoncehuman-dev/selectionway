@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Login — SelectionWay</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+    background: #0d1117; color: #e6edf3; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .card {
+    background: #161b22; border: 1px solid #30363d;
+    border-radius: 12px; padding: 40px 36px; width: 100%; max-width: 360px;
+  }
+  .logo { font-size: 2rem; text-align: center; margin-bottom: 8px; }
+  h1 { text-align: center; font-size: 1.2rem; margin-bottom: 4px; }
+  .sub { text-align: center; color: #8b949e; font-size: 0.85rem; margin-bottom: 28px; }
+  label { display: block; font-size: 0.83rem; color: #8b949e; margin-bottom: 6px; }
+  input {
+    width: 100%; background: #0d1117; border: 1px solid #30363d;
+    border-radius: 8px; padding: 10px 14px; color: #e6edf3;
+    font-size: 0.95rem; outline: none; margin-bottom: 16px;
+    transition: border-color 0.15s;
+  }
+  input:focus { border-color: #3b82f6; }
+  .error {
+    background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 8px; padding: 10px 14px; color: #f87171;
+    font-size: 0.84rem; margin-bottom: 16px;
+  }
+  button {
+    width: 100%; background: #3b82f6; color: #fff;
+    border: none; border-radius: 8px; padding: 11px;
+    font-size: 0.95rem; font-weight: 700; cursor: pointer;
+    transition: background 0.15s;
+  }
+  button:hover { background: #2563eb; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">🛡</div>
+  <h1>Admin Portal</h1>
+  <p class="sub">SelectionWay Bot</p>
+  {% if error %}
+  <div class="error">❌ {{ error }}</div>
+  {% endif %}
+  <form method="post">
+    <label>Password</label>
+    <input type="password" name="password" placeholder="Enter admin password" autofocus required>
+    <button type="submit">Sign In</button>
+  </form>
+</div>
+</body>
+</html>
