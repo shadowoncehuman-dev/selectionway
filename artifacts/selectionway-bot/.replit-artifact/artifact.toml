@@ -1,0 +1,18 @@
+kind = "web"
+previewPath = "/"
+title = "SelectionWay Bot"
+version = "1.0.0"
+id = "artifacts/selectionway-bot"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19670
+
+[services.development]
+run = "cd ../../bot && python main.py"
+
+[services.env]
+PORT = "19670"
+BASE_PATH = "/"

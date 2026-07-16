@@ -590,7 +590,7 @@ def proxy_video():
 def index():
     return render_template("miniapp.html")
 
-@app.route("/api/batches")
+@app.route("/bot-api/batches")
 def api_batches():
     ok, data = sw_get_all_batches()
     if not ok:
@@ -600,7 +600,9 @@ def api_batches():
     slim = []
     for b in sorted_data:
         cat = (b.get("mainCategory") or {}).get("mainCategoryName", "")
-        thumb = b.get("bannerSquare") or b.get("banner") or ""
+        thumb = (b.get("banner") or b.get("bannerSquare") or
+                 b.get("bannerLandscape") or b.get("thumbnail") or
+                 b.get("image") or b.get("coverImage") or b.get("photo") or "")
         if thumb:
             thumb = f"/proxy-img?url={quote(thumb, safe='')}"
         live_now = is_batch_live_now(b)
@@ -619,7 +621,7 @@ def api_batches():
         })
     return jsonify(slim)
 
-@app.route("/api/batch/<batch_id>/classes")
+@app.route("/bot-api/batch/<batch_id>/classes")
 def api_batch_classes(batch_id):
     # Get classes
     ok, classes_data = sw_get_batch_classes(batch_id)
@@ -638,7 +640,9 @@ def api_batch_classes(batch_id):
     result = build_classes_data(classes_data, batch_meta)
 
     # Proxy thumbnails in batch_meta before sending
-    thumb = batch_meta.get("bannerSquare") or batch_meta.get("banner") or ""
+    thumb = (batch_meta.get("banner") or batch_meta.get("bannerSquare") or
+             batch_meta.get("bannerLandscape") or batch_meta.get("thumbnail") or
+             batch_meta.get("image") or batch_meta.get("coverImage") or batch_meta.get("photo") or "")
     if thumb:
         thumb = f"/proxy-img?url={quote(thumb, safe='')}"
 
@@ -696,12 +700,12 @@ def admin_home():
     stats = db_stats()
     return render_template("admin.html", stats=stats)
 
-@app.route("/api/admin/stats")
+@app.route("/bot-api/admin/stats")
 @admin_required
 def api_admin_stats():
     return jsonify(db_stats())
 
-@app.route("/api/admin/users")
+@app.route("/bot-api/admin/users")
 @admin_required
 def api_admin_users():
     page = int(request.args.get("page", 0))
@@ -724,7 +728,7 @@ def api_admin_users():
         })
     return jsonify({"users": users, "total": total, "page": page, "page_size": PAGE})
 
-@app.route("/api/admin/user/<int:uid>")
+@app.route("/bot-api/admin/user/<int:uid>")
 @admin_required
 def api_admin_user(uid):
     u = db_get_user(uid)
@@ -744,7 +748,7 @@ def api_admin_user(uid):
         "history":    history,
     })
 
-@app.route("/api/admin/ban", methods=["POST"])
+@app.route("/bot-api/admin/ban", methods=["POST"])
 @admin_required
 def api_admin_ban():
     data = request.get_json()
@@ -753,7 +757,7 @@ def api_admin_ban():
     db_set_banned(uid, ban)
     return jsonify({"ok": True, "banned": ban})
 
-@app.route("/api/admin/limit", methods=["POST"])
+@app.route("/bot-api/admin/limit", methods=["POST"])
 @admin_required
 def api_admin_limit():
     data   = request.get_json()

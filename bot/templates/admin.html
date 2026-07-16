@@ -243,7 +243,7 @@ let currentUid  = null;
 // ── Stats refresh ──
 async function refreshStats() {
   try {
-    const r = await fetch('/api/admin/stats');
+    const r = await fetch('/bot-api/admin/stats');
     const s = await r.json();
     document.getElementById('s-total').textContent   = s.total;
     document.getElementById('s-banned').textContent  = s.banned;
@@ -257,7 +257,7 @@ async function loadUsers(page) {
   currentPage = page;
   document.getElementById('users-tbody').innerHTML =
     '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--hint)">Loading…</td></tr>';
-  const r = await fetch(`/api/admin/users?page=${page}`);
+  const r = await fetch(`/bot-api/admin/users?page=${page}`);
   const data = await r.json();
   totalUsers = data.total;
 
@@ -307,7 +307,7 @@ async function openUserPanel(uid) {
   document.getElementById('panel-body').innerHTML = '<div style="text-align:center;padding:40px;color:var(--hint)">Loading…</div>';
   document.getElementById('panel-actions').innerHTML = '';
 
-  const r = await fetch(`/api/admin/user/${uid}`);
+  const r = await fetch(`/bot-api/admin/user/${uid}`);
   if (!r.ok) { showToast('User not found'); return; }
   const u = await r.json();
 
@@ -363,7 +363,7 @@ function closePanel() {
 
 // ── Ban/Unban ──
 async function setBan(uid, banned) {
-  const r = await fetch('/api/admin/ban', {
+  const r = await fetch('/bot-api/admin/ban', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({user_id: uid, banned}),
@@ -386,7 +386,7 @@ function closeLimit() {
 async function saveLimit() {
   const count  = parseInt(document.getElementById('limit-count').value) || 0;
   const period = document.getElementById('limit-period').value;
-  const r = await fetch('/api/admin/limit', {
+  const r = await fetch('/bot-api/admin/limit', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({user_id: currentUid, limit: count, period}),

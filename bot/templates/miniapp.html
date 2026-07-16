@@ -3,766 +3,1113 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>SelectionWay Courses</title>
+<title>SelectionWay</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
 <style>
-  :root {
-    --bg: var(--tg-theme-bg-color, #0f1115);
-    --bg2: var(--tg-theme-secondary-bg-color, #1a1d24);
-    --text: var(--tg-theme-text-color, #f1f1f1);
-    --hint: var(--tg-theme-hint-color, #8a93a3);
-    --link: var(--tg-theme-link-color, #4dabf7);
-    --btn: var(--tg-theme-button-color, #3b82f6);
-    --btn-text: var(--tg-theme-button-text-color, #ffffff);
-    --divider: rgba(255,255,255,0.08);
-    --card-bg: rgba(255,255,255,0.04);
-    --radius: 12px;
-    --live: #ef4444;
-    --success: #22c55e;
-  }
+/* ═══════════════════════════════════════════════════════════
+   DESIGN SYSTEM
+═══════════════════════════════════════════════════════════ */
+:root {
+  --bg:        #060912;
+  --surface:   #0d1121;
+  --lift:      #141a2e;
+  --lift2:     #1c2440;
+  --border:    rgba(255,255,255,0.07);
+  --border2:   rgba(255,255,255,0.12);
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  --accent:    #7c63ff;
+  --accent-lo: rgba(124,99,255,0.14);
+  --accent-hi: rgba(124,99,255,0.32);
 
-  body {
-    font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overflow-x: hidden;
-    -webkit-tap-highlight-color: transparent;
-  }
+  --text:      #f0f4ff;
+  --sub:       #7a8aad;
+  --muted:     #3d4e6a;
 
-  /* ── Top Bar ── */
-  .topbar {
-    position: sticky; top: 0; z-index: 50;
-    background: var(--bg);
-    border-bottom: 1px solid var(--divider);
-    padding: 10px 16px;
-    display: flex; align-items: center; gap: 10px;
-  }
-  .back-btn {
-    background: none; border: none; color: var(--link);
-    font-size: 1rem; cursor: pointer; padding: 4px;
-    display: flex; align-items: center; gap: 4px;
-    opacity: 0; pointer-events: none; transition: opacity 0.2s;
-  }
-  .back-btn.visible { opacity: 1; pointer-events: all; }
-  .topbar-title { flex: 1; font-size: 1rem; font-weight: 700; }
-  .topbar-badge {
-    font-size: 0.7rem; background: var(--btn); color: var(--btn-text);
-    border-radius: 20px; padding: 2px 8px; font-weight: 700;
-  }
+  --live:      #ff4757;
+  --green:     #23d18b;
+  --gold:      #fbbf24;
 
-  /* ── Search bar ── */
-  .search-wrap { padding: 10px 16px; }
-  .search-input {
-    width: 100%; background: var(--bg2); border: 1px solid var(--divider);
-    border-radius: var(--radius); padding: 9px 14px;
-    color: var(--text); font-size: 0.9rem; outline: none;
-  }
-  .search-input::placeholder { color: var(--hint); }
-  .search-input:focus { border-color: var(--btn); }
+  --r:  14px;
+  --r2:  9px;
+  --r3: 50px;
 
-  /* ── Views ── */
-  .view { display: none; }
-  .view.active { display: block; }
+  --dur: 0.26s;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
 
-  /* ── Batch list ── */
-  .batch-list { padding: 0 16px 80px; }
-  .batch-card {
-    background: var(--card-bg);
-    border: 1px solid var(--divider);
-    border-radius: var(--radius);
-    display: flex; gap: 12px; align-items: flex-start;
-    padding: 12px; margin-bottom: 10px;
-    cursor: pointer; transition: transform 0.12s, background 0.12s;
-    text-decoration: none; color: inherit;
-  }
-  .batch-card:active { transform: scale(0.98); background: var(--bg2); }
-  .batch-thumb-wrap {
-    width: 80px; height: 54px; border-radius: 8px; overflow: hidden;
-    flex-shrink: 0; background: var(--bg2); position: relative;
-  }
-  .batch-thumb {
-    width: 100%; height: 100%; object-fit: cover; display: block;
-  }
-  .thumb-placeholder {
-    width: 100%; height: 100%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.6rem;
-  }
-  .live-dot {
-    position: absolute; top: 4px; right: 4px;
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--live); box-shadow: 0 0 0 2px rgba(239,68,68,0.3);
-    animation: pulse 1.2s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 0 2px rgba(239,68,68,0.3); }
-    50% { box-shadow: 0 0 0 5px rgba(239,68,68,0); }
-  }
-  .batch-info { flex: 1; min-width: 0; }
-  .batch-cat {
-    font-size: 0.68rem; font-weight: 700; color: var(--btn);
-    text-transform: uppercase; letter-spacing: .05em; margin-bottom: 3px;
-  }
-  .batch-title { font-size: 0.88rem; font-weight: 700; line-height: 1.3; margin-bottom: 4px; }
-  .batch-desc { font-size: 0.75rem; color: var(--hint); line-height: 1.4;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .batch-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
-  .chip {
-    font-size: 0.68rem; color: var(--hint);
-    background: var(--bg2); border-radius: 20px; padding: 2px 7px;
-  }
-  .chip.live { color: var(--live); border: 1px solid var(--live); }
+*, *::before, *::after {
+  box-sizing: border-box; margin: 0; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
 
-  /* ── Batch detail header ── */
-  .batch-hero {
-    background: var(--bg2); border-bottom: 1px solid var(--divider);
-    padding: 16px;
-  }
-  .hero-thumb {
-    width: 100%; aspect-ratio: 16/9; object-fit: cover;
-    border-radius: var(--radius); margin-bottom: 12px; background: var(--card-bg);
-    display: block;
-  }
-  .hero-cat { font-size: 0.7rem; font-weight: 700; color: var(--btn);
-    text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
-  .hero-title { font-size: 1.15rem; font-weight: 800; margin-bottom: 6px; }
-  .hero-desc { font-size: 0.8rem; color: var(--hint); line-height: 1.5; margin-bottom: 10px; }
-  .hero-chips { display: flex; gap: 6px; flex-wrap: wrap; }
-  .hero-chip {
-    font-size: 0.74rem; background: var(--card-bg); border: 1px solid var(--divider);
-    border-radius: 20px; padding: 4px 10px; color: var(--hint);
-  }
+html { overflow-x: hidden; }
 
-  /* ── Tabs ── */
-  .tabs-bar {
-    display: flex; border-bottom: 1px solid var(--divider);
-    background: var(--bg); position: sticky; top: 49px; z-index: 40;
-  }
-  .tab-btn {
-    flex: 1; background: none; border: none; color: var(--hint);
-    font-size: 0.82rem; font-weight: 600; padding: 11px 4px;
-    cursor: pointer; border-bottom: 2px solid transparent; transition: color 0.15s;
-  }
-  .tab-btn.active { color: var(--btn); border-bottom-color: var(--btn); }
-  .tab-panel { display: none; padding: 0 0 80px; }
-  .tab-panel.active { display: block; }
+body {
+  font-family: -apple-system, 'SF Pro Display', 'Segoe UI', Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
 
-  /* ── Topic accordion ── */
-  .topic-group { border-bottom: 1px solid var(--divider); }
-  .topic-header {
-    width: 100%; display: flex; align-items: center; gap: 8px;
-    background: none; border: none; color: var(--text);
-    padding: 13px 16px; cursor: pointer; text-align: left;
-  }
-  .topic-name { font-weight: 700; font-size: 0.9rem; flex: 1; }
-  .topic-teacher { font-size: 0.75rem; color: var(--hint); white-space: nowrap; }
-  .topic-count { font-size: 0.72rem; color: var(--hint); white-space: nowrap; }
-  .chevron { color: var(--hint); font-size: 1rem; transition: transform 0.18s; margin-left: 4px; }
-  .topic-header.open .chevron { transform: rotate(90deg); }
-  .topic-body { background: var(--bg2); }
+/* ═══════════════════════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════════════════════ */
+#header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: 56px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 14px;
+  background: rgba(6,9,18,0.88);
+  backdrop-filter: blur(28px) saturate(1.6);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6);
+  border-bottom: 1px solid var(--border);
+  transition: background var(--dur);
+}
 
-  /* ── Lecture row ── */
-  .lecture-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 11px 16px; border-bottom: 1px solid var(--divider);
-    cursor: pointer; transition: background 0.1s;
-  }
-  .lecture-row:last-child { border-bottom: none; }
-  .lecture-row:active { background: rgba(255,255,255,0.04); }
-  .lecture-icon { font-size: 1.2rem; flex-shrink: 0; }
-  .lecture-info { flex: 1; min-width: 0; }
-  .lecture-title {
-    font-size: 0.84rem; font-weight: 600; line-height: 1.35;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .lecture-meta { font-size: 0.71rem; color: var(--hint); margin-top: 2px; }
-  .live-badge { color: var(--live); font-weight: 700; }
-  .play-icon { color: var(--btn); font-size: 1.1rem; flex-shrink: 0; }
-  .no-video { color: var(--hint); font-size: 0.9rem; flex-shrink: 0; }
+#back-btn {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--lift); border: 1px solid var(--border2);
+  color: var(--text); font-size: 1.15rem; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0;
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--dur), transform 0.15s;
+}
+#back-btn.show { opacity: 1; pointer-events: all; }
+#back-btn:active { transform: scale(0.88); }
 
-  /* ── PDF / Test lists ── */
-  .resource-section { padding: 12px 16px; }
-  .resource-section h4 {
-    font-size: 0.78rem; color: var(--hint); font-weight: 700;
-    text-transform: uppercase; letter-spacing: .05em; margin: 12px 0 6px;
-  }
-  .resource-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 0; border-bottom: 1px solid var(--divider);
-  }
-  .resource-item:last-child { border-bottom: none; }
-  .resource-item a { color: var(--link); font-size: 0.83rem; text-decoration: none; flex: 1; }
+#logo {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; justify-content: center;
+}
+#logo-name {
+  font-size: 1rem; font-weight: 800; letter-spacing: -0.02em;
+  background: linear-gradient(90deg, #fff 30%, #c4b5fd 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+#logo-sub {
+  font-size: 0.58rem; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--accent); margin-top: 1px;
+}
 
-  /* ── Player modal ── */
-  #player-modal {
-    position: fixed; inset: 0; z-index: 100;
-    background: rgba(0,0,0,0.92);
-    display: flex; flex-direction: column;
-    opacity: 0; pointer-events: none; transition: opacity 0.2s;
-  }
-  #player-modal.open { opacity: 1; pointer-events: all; }
-  .player-top {
-    display: flex; align-items: center; gap: 10px;
-    padding: 14px 16px; background: #0d0d0d;
-    border-bottom: 1px solid var(--divider);
-  }
-  .player-close {
-    background: rgba(255,255,255,0.1); border: none; color: #fff;
-    border-radius: 8px; padding: 6px 12px; font-size: 0.85rem; cursor: pointer;
-    flex-shrink: 0;
-  }
-  #player-title {
-    flex: 1; font-size: 0.88rem; font-weight: 600;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .player-quality { font-size: 0.72rem; color: var(--hint); white-space: nowrap; }
-  .player-body {
-    flex: 1; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; padding: 16px;
-    overflow-y: auto;
-  }
-  #video-wrap {
-    width: 100%; max-width: 900px;
-    background: #000; border-radius: 10px; overflow: hidden;
-    aspect-ratio: 16/9;
-  }
-  #video-wrap video, #video-wrap iframe {
-    width: 100%; height: 100%; border: 0; display: block;
-  }
-  .player-status {
-    margin-top: 12px; text-align: center; color: var(--hint);
-    font-size: 0.82rem; max-width: 400px; line-height: 1.5;
-  }
-  .player-status a { color: var(--link); }
-  .player-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
-  .player-btn {
-    background: var(--btn); color: var(--btn-text); border: none;
-    border-radius: 8px; padding: 8px 16px; font-size: 0.82rem;
-    font-weight: 700; cursor: pointer; text-decoration: none;
-    display: inline-flex; align-items: center; gap: 5px;
-  }
-  .player-btn.secondary { background: rgba(255,255,255,0.1); color: #fff; }
+#hdr-title {
+  flex: 1; min-width: 0;
+  font-size: 0.95rem; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: none;
+}
+#hdr-count {
+  background: var(--accent); color: #fff;
+  font-size: 0.68rem; font-weight: 700;
+  padding: 3px 10px; border-radius: var(--r3);
+  display: none; white-space: nowrap;
+}
 
-  /* ── Loading / empty ── */
-  .spinner-wrap { display: flex; align-items: center; justify-content: center; padding: 60px; }
-  .spinner {
-    width: 36px; height: 36px; border: 3px solid var(--divider);
-    border-top-color: var(--btn); border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .empty-state {
-    text-align: center; padding: 60px 24px; color: var(--hint);
-    font-size: 0.9rem; line-height: 1.7;
-  }
-  .empty-state .icon { font-size: 2.5rem; margin-bottom: 12px; }
+/* ═══════════════════════════════════════════════════════════
+   SEARCH + FILTER BAR
+═══════════════════════════════════════════════════════════ */
+#filter-bar {
+  position: fixed; top: 56px; left: 0; right: 0; z-index: 90;
+  background: rgba(6,9,18,0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  transition: transform var(--dur) var(--ease);
+}
+#filter-bar.hidden { transform: translateY(-100%); pointer-events: none; }
 
-  /* Subtle entrance animation */
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .batch-card { animation: fadeUp 0.25s ease both; }
+.search-row {
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px 14px 8px;
+}
+.search-icon { color: var(--sub); flex-shrink: 0; }
+#search-input {
+  flex: 1; background: none; border: none; outline: none;
+  color: var(--text); font-size: 0.87rem;
+  caret-color: var(--accent);
+}
+#search-input::placeholder { color: var(--muted); }
+
+.chips-scroll {
+  display: flex; gap: 7px; padding: 0 14px 10px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.chips-scroll::-webkit-scrollbar { display: none; }
+
+.cat-chip {
+  flex-shrink: 0; padding: 5px 14px;
+  border-radius: var(--r3); border: 1px solid var(--border2);
+  background: var(--lift); color: var(--sub);
+  font-size: 0.75rem; font-weight: 600; cursor: pointer;
+  white-space: nowrap; transition: all 0.16s;
+}
+.cat-chip.active {
+  color: #fff; border-color: transparent;
+}
+.cat-chip:active { transform: scale(0.92); }
+
+/* ═══════════════════════════════════════════════════════════
+   PAGE SYSTEM
+═══════════════════════════════════════════════════════════ */
+.page {
+  position: fixed; inset: 0;
+  top: 56px; /* below header */
+  overflow-y: auto; overflow-x: hidden;
+  visibility: hidden; opacity: 0;
+  transform: translateX(40px);
+  transition: transform var(--dur) var(--ease),
+              opacity    var(--dur) var(--ease),
+              visibility 0s linear var(--dur);
+  -webkit-overflow-scrolling: touch;
+}
+.page.active {
+  visibility: visible; opacity: 1; transform: none;
+  transition: transform var(--dur) var(--ease),
+              opacity    var(--dur) var(--ease),
+              visibility 0s;
+}
+.page.slide-back {
+  transform: translateX(-30px);
+}
+
+#page-home { top: 56px; }   /* header only */
+#page-batch, #page-topic { top: 56px; }
+
+/* ═══════════════════════════════════════════════════════════
+   SKELETON SHIMMER
+═══════════════════════════════════════════════════════════ */
+@keyframes shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position:  600px 0; }
+}
+.skel {
+  background: linear-gradient(90deg,
+    var(--lift) 25%, var(--lift2) 50%, var(--lift) 75%);
+  background-size: 600px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: var(--r);
+}
+.skel-card {
+  margin-bottom: 12px; overflow: hidden;
+  border-radius: var(--r);
+}
+.skel-img  { width:100%; aspect-ratio:16/7; border-radius:0; }
+.skel-line { height: 14px; margin: 12px 14px 6px; border-radius: 6px; }
+.skel-line.short { width: 55%; }
+.skel-line.thin  { height: 10px; width: 70%; }
+
+/* ═══════════════════════════════════════════════════════════
+   BATCH CARDS — IMAGE-FIRST OVERLAY STYLE
+═══════════════════════════════════════════════════════════ */
+#home-pad {
+  padding-top: 110px; /* header + filter bar */
+  padding-bottom: 30px;
+}
+
+.section-hdr {
+  display: flex; align-items: center; gap: 8px;
+  padding: 18px 14px 10px;
+  font-size: 0.68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--sub);
+}
+.section-hdr::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+.batch-grid { padding: 0 12px; }
+
+.batch-card {
+  position: relative; overflow: hidden;
+  border-radius: var(--r);
+  margin-bottom: 12px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  transition: transform 0.14s var(--ease), box-shadow 0.14s;
+  will-change: transform;
+}
+.batch-card:active {
+  transform: scale(0.975);
+  box-shadow: 0 0 0 2px var(--accent-hi);
+}
+.batch-card.faved { border-color: rgba(124,99,255,0.4); }
+
+.card-img-wrap {
+  position: relative; width: 100%; aspect-ratio: 16/7;
+  background: var(--lift); overflow: hidden;
+}
+.card-img-wrap img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; object-fit: cover;
+  display: block; opacity: 0;
+  transition: opacity 0.4s;
+}
+.card-img-wrap img.loaded { opacity: 1; }
+
+.card-placeholder {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 3rem;
+}
+
+/* gradient overlay bottom half */
+.card-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(6,9,18,0)   0%,
+    rgba(6,9,18,0)   30%,
+    rgba(6,9,18,0.7) 65%,
+    rgba(6,9,18,0.95) 100%
+  );
+}
+
+.card-live-badge {
+  position: absolute; top: 10px; left: 10px; z-index: 2;
+  background: var(--live); color: #fff;
+  font-size: 0.62rem; font-weight: 900; letter-spacing: 0.06em;
+  padding: 2px 8px; border-radius: 4px;
+  animation: livePulse 2s ease-in-out infinite;
+}
+@keyframes livePulse {
+  0%,100% { opacity: 1; } 50% { opacity: 0.75; }
+}
+
+.fav-btn {
+  position: absolute; top: 8px; right: 8px; z-index: 3;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.1);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; cursor: pointer;
+  transition: transform 0.18s var(--ease), background 0.15s;
+}
+.fav-btn:active { transform: scale(0.78); }
+.fav-btn.on { background: rgba(251,191,36,0.25); border-color: rgba(251,191,36,0.4); }
+
+@keyframes heartPop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.45); }
+  70%  { transform: scale(0.88); }
+  100% { transform: scale(1); }
+}
+.fav-btn.popping { animation: heartPop 0.38s var(--ease); }
+
+.card-meta {
+  position: relative; z-index: 2;
+  padding: 10px 13px 13px;
+}
+.card-cat-chip {
+  display: inline-flex; align-items: center;
+  font-size: 0.62rem; font-weight: 800; letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 2px 9px; border-radius: var(--r3);
+  margin-bottom: 6px;
+}
+.card-title {
+  font-size: 0.92rem; font-weight: 800; line-height: 1.35;
+  color: var(--text); margin-bottom: 6px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card-foot {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 0.72rem; color: var(--sub); flex-wrap: wrap;
+}
+.card-foot span { display: flex; align-items: center; gap: 3px; }
+
+/* ═══════════════════════════════════════════════════════════
+   BATCH DETAIL — HERO
+═══════════════════════════════════════════════════════════ */
+.detail-hero {
+  position: relative; overflow: hidden;
+}
+.hero-bg {
+  position: absolute; inset: -20px;
+  background-size: cover; background-position: center;
+  filter: blur(24px) brightness(0.35) saturate(1.2);
+  transform: scale(1.05);
+}
+.hero-fg {
+  position: relative; z-index: 2;
+  padding: 20px 16px 18px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+}
+.hero-thumb {
+  width: 100%; aspect-ratio: 16/6.5;
+  object-fit: cover; border-radius: 11px;
+  display: block; margin-bottom: 4px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+}
+.hero-thumb-placeholder {
+  width: 100%; aspect-ratio: 16/6.5;
+  background: var(--lift); border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 3.5rem; margin-bottom: 4px;
+}
+.hero-cat { font-size: 0.64rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.hero-title { font-size: 1.1rem; font-weight: 800; line-height: 1.3; }
+.hero-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.hero-chip {
+  font-size: 0.71rem; color: var(--sub);
+  background: rgba(255,255,255,0.07); border: 1px solid var(--border2);
+  border-radius: var(--r3); padding: 4px 11px;
+  display: flex; align-items: center; gap: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOPIC CARDS
+═══════════════════════════════════════════════════════════ */
+.topics-wrap { padding: 4px 12px 80px; }
+
+.topic-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 13px 14px;
+  margin-bottom: 8px; cursor: pointer;
+  display: flex; align-items: center; gap: 13px;
+  transition: transform 0.13s var(--ease), border-color 0.15s;
+}
+.topic-card:active { transform: scale(0.975); }
+.topic-card:hover  { border-color: var(--border2); }
+
+.topic-icon-box {
+  width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.35rem;
+}
+.topic-text { flex: 1; min-width: 0; }
+.topic-name { font-size: 0.89rem; font-weight: 700; line-height: 1.3; margin-bottom: 3px; }
+.topic-sub  { font-size: 0.73rem; color: var(--sub);
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topic-right { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.topic-count {
+  font-size: 0.68rem; font-weight: 700;
+  padding: 3px 10px; border-radius: var(--r3);
+}
+.topic-arrow { color: var(--muted); font-size: 1.1rem; }
+
+/* ═══════════════════════════════════════════════════════════
+   TOPIC HERO (lecture view)
+═══════════════════════════════════════════════════════════ */
+.lview-hero {
+  padding: 16px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 14px;
+}
+.lview-icon {
+  width: 54px; height: 54px; border-radius: 14px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem;
+}
+.lview-info { flex: 1; min-width: 0; }
+.lview-name { font-size: 1rem; font-weight: 800; margin-bottom: 4px; line-height: 1.2; }
+.lview-teacher { font-size: 0.77rem; color: var(--sub); }
+.lview-badge {
+  font-size: 0.7rem; font-weight: 700; color: #fff;
+  background: var(--accent); border-radius: var(--r3);
+  padding: 4px 12px; flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LECTURE CARDS
+═══════════════════════════════════════════════════════════ */
+.lec-list { padding: 10px 12px 90px; }
+
+.lec-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 12px 14px;
+  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 12px;
+  cursor: pointer; transition: transform 0.12s, border-color 0.15s;
+}
+.lec-card.playable:active { transform: scale(0.978); }
+.lec-card.dark { opacity: 0.55; cursor: default; }
+
+.lec-num {
+  width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+  background: var(--lift);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 700; color: var(--sub);
+}
+.lec-card.playable .lec-num { background: var(--accent-lo); color: var(--accent); }
+
+.lec-text { flex: 1; min-width: 0; }
+.lec-title {
+  font-size: 0.85rem; font-weight: 600; line-height: 1.38; margin-bottom: 3px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.lec-meta { font-size: 0.7rem; color: var(--sub); }
+.live-tag {
+  display: inline-block; background: rgba(255,71,87,0.15);
+  color: var(--live); font-size: 0.6rem; font-weight: 800;
+  border-radius: 4px; padding: 1px 6px; margin-right: 5px; vertical-align: middle;
+}
+.play-dot {
+  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+  background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.82rem;
+  box-shadow: 0 4px 14px rgba(124,99,255,0.4);
+}
+.lec-card.dark .play-dot { display: none; }
+
+/* ═══════════════════════════════════════════════════════════
+   PLAYER MODAL
+═══════════════════════════════════════════════════════════ */
+#player {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(4,5,12,0.97);
+  display: flex; flex-direction: column;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.22s;
+}
+#player.open { opacity: 1; pointer-events: all; }
+
+.player-top {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px;
+  background: #030409;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+#player-close {
+  background: var(--lift); border: 1px solid var(--border2);
+  color: var(--text); border-radius: var(--r2);
+  padding: 7px 14px; font-size: 0.82rem; font-weight: 600;
+  cursor: pointer; flex-shrink: 0;
+  transition: background 0.14s;
+}
+#player-close:active { background: var(--lift2); }
+#player-title {
+  flex: 1; font-size: 0.86rem; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.player-body {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; padding: 16px;
+  overflow-y: auto;
+}
+#video-wrap {
+  width: 100%; max-width: 820px;
+  background: #000; border-radius: 12px; overflow: hidden;
+  aspect-ratio: 16/9;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+}
+#video-wrap video, #video-wrap iframe {
+  width: 100%; height: 100%; border: 0; display: block;
+}
+#player-msg {
+  margin-top: 14px; text-align: center;
+  color: var(--sub); font-size: 0.82rem;
+  max-width: 360px; line-height: 1.6;
+}
+#player-msg a { color: var(--accent); }
+
+/* ═══════════════════════════════════════════════════════════
+   EMPTY / LOADING
+═══════════════════════════════════════════════════════════ */
+.spinner-wrap {
+  display: flex; align-items: center; justify-content: center; padding: 64px 20px;
+}
+.spinner {
+  width: 34px; height: 34px;
+  border: 3px solid var(--border2); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 0.72s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-state {
+  text-align: center; padding: 56px 24px; color: var(--sub); line-height: 1.75;
+}
+.empty-state .ei { font-size: 2.8rem; margin-bottom: 10px; }
+
+/* ═══════════════════════════════════════════════════════════
+   CATEGORY COLOR TOKENS (applied via JS data-cat attribute)
+═══════════════════════════════════════════════════════════ */
+/* Applied inline via JS — keeping definitions here for reference */
 </style>
 </head>
 <body>
 
-<!-- ── Top Bar ── -->
-<div class="topbar">
-  <button class="back-btn" id="back-btn" onclick="goBack()">‹ Back</button>
-  <span class="topbar-title" id="topbar-title">📚 SelectionWay</span>
-  <span class="topbar-badge" id="topbar-badge" style="display:none"></span>
+<!-- ══ HEADER ══════════════════════════════════════════════ -->
+<div id="header">
+  <button id="back-btn" onclick="navBack()">‹</button>
+  <div id="logo">
+    <div id="logo-name">SelectionWay</div>
+    <div id="logo-sub">By Trms</div>
+  </div>
+  <div id="hdr-title"></div>
+  <span id="hdr-count"></span>
 </div>
 
-<!-- ── View: Batch List ── -->
-<div class="view active" id="view-batches">
-  <div class="search-wrap">
-    <input class="search-input" id="search-input" type="search"
-           placeholder="Search batches…" oninput="filterBatches(this.value)">
+<!-- ══ FILTER BAR (home only) ══════════════════════════════ -->
+<div id="filter-bar">
+  <div class="search-row">
+    <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input id="search-input" type="search" placeholder="Search batches, teachers…"
+           oninput="filterBatches(this.value)" autocomplete="off">
   </div>
-  <div class="batch-list" id="batch-list">
-    <div class="spinner-wrap"><div class="spinner"></div></div>
+  <div class="chips-scroll" id="cat-chips">
+    <div class="cat-chip active" data-cat="" onclick="selectCat(this,'')">All</div>
   </div>
 </div>
 
-<!-- ── View: Batch Detail ── -->
-<div class="view" id="view-detail">
+<!-- ══ PAGE: HOME ═══════════════════════════════════════════ -->
+<div class="page active" id="page-home">
+  <div id="home-pad">
+    <div id="fav-section"></div>
+    <div id="batch-section">
+      <!-- skeleton -->
+      <div id="batch-list">
+        ${skeletonCards(4)}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PAGE: BATCH DETAIL ═══════════════════════════════════ -->
+<div class="page" id="page-batch">
   <div id="batch-hero"></div>
-  <div class="tabs-bar">
-    <button class="tab-btn active" id="tab-btn-classes"  onclick="showTab('classes')">📚 Classes</button>
-    <button class="tab-btn"        id="tab-btn-sheets"   onclick="showTab('sheets')">📄 Sheets</button>
-    <button class="tab-btn"        id="tab-btn-tests"    onclick="showTab('tests')">📝 Tests</button>
+  <div class="topics-wrap">
+    <div class="section-hdr">Topics &amp; Chapters</div>
+    <div id="topic-cards"></div>
   </div>
-  <div class="tab-panel active" id="tab-classes"><div class="spinner-wrap"><div class="spinner"></div></div></div>
-  <div class="tab-panel"        id="tab-sheets"></div>
-  <div class="tab-panel"        id="tab-tests"></div>
 </div>
 
-<!-- ── Player Modal ── -->
-<div id="player-modal">
+<!-- ══ PAGE: LECTURE LIST ═══════════════════════════════════ -->
+<div class="page" id="page-topic">
+  <div id="lview-hero"></div>
+  <div class="lec-list" id="lec-list"></div>
+</div>
+
+<!-- ══ PLAYER MODAL ════════════════════════════════════════ -->
+<div id="player">
   <div class="player-top">
-    <button class="player-close" onclick="closePlayer()">✕</button>
-    <span id="player-title">Loading…</span>
-    <span class="player-quality" id="player-quality"></span>
+    <button id="player-close" onclick="closePlayer()">✕ Close</button>
+    <span id="player-title"></span>
   </div>
   <div class="player-body">
     <div id="video-wrap"></div>
-    <div class="player-status" id="player-status"></div>
-    <div class="player-actions" id="player-actions"></div>
+    <div id="player-msg"></div>
   </div>
 </div>
 
 <script>
-// ─────────────────────────────────────────────────────────────
-// Telegram WebApp init
-// ─────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// TELEGRAM INIT
+// ══════════════════════════════════════════════════════════════
 if (window.Telegram && Telegram.WebApp) {
   Telegram.WebApp.ready();
   Telegram.WebApp.expand();
 }
 
-// ─────────────────────────────────────────────────────────────
-// State
-// ─────────────────────────────────────────────────────────────
-let allBatches = [];
-let filteredBatches = [];
-let currentBatch = null;
-let currentVideos = [];
-let hlsInstance = null;
-let viewStack = ['batches'];
+// ══════════════════════════════════════════════════════════════
+// CATEGORY COLOR SYSTEM
+// ══════════════════════════════════════════════════════════════
+const CAT_COLORS = [
+  { match: ['ssc','railway','rrb'],         bg:'#f59e0b', text:'#000', icon:'🚂' },
+  { match: ['upsc','civil','ias'],          bg:'#8b5cf6', text:'#fff', icon:'🏛️' },
+  { match: ['math','maths','quantitative'], bg:'#3b82f6', text:'#fff', icon:'📐' },
+  { match: ['english','grammar'],           bg:'#10b981', text:'#fff', icon:'📝' },
+  { match: ['history','ancient','modern'],  bg:'#ef4444', text:'#fff', icon:'🏺' },
+  { match: ['polity','political','constitution'], bg:'#6366f1', text:'#fff', icon:'⚖️' },
+  { match: ['geo','geography'],             bg:'#06b6d4', text:'#fff', icon:'🌍' },
+  { match: ['economy','economic','eco'],    bg:'#22c55e', text:'#000', icon:'📊' },
+  { match: ['science','physics','chemistry','biology'], bg:'#a855f7', text:'#fff', icon:'🔬' },
+  { match: ['reasoning','logic'],           bg:'#f97316', text:'#fff', icon:'🧠' },
+  { match: ['hindi','language'],            bg:'#ec4899', text:'#fff', icon:'📖' },
+  { match: ['general','gk','current'],      bg:'#14b8a6', text:'#fff', icon:'🌐' },
+];
+const CAT_DEFAULT = { bg:'#4f6272', text:'#fff', icon:'📚' };
 
-// ─────────────────────────────────────────────────────────────
-// Navigation
-// ─────────────────────────────────────────────────────────────
-function showView(name) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.getElementById('view-' + name).classList.add('active');
-  const backBtn = document.getElementById('back-btn');
-  if (viewStack.length > 1) {
-    backBtn.classList.add('visible');
-  } else {
-    backBtn.classList.remove('visible');
+const TOPIC_ICONS = ['📖','📝','🎯','🏛️','🌍','⚖️','💡','🔬','📊','🗺️','⚡','🎓','🧠','📐','🌐','🏺','🚀','🔑'];
+
+function catStyle(cat) {
+  const c = (cat||'').toLowerCase();
+  for (const entry of CAT_COLORS) {
+    if (entry.match.some(m => c.includes(m))) return entry;
   }
+  return CAT_DEFAULT;
 }
 
-function goBack() {
-  if (viewStack.length <= 1) return;
-  viewStack.pop();
-  const prev = viewStack[viewStack.length - 1];
-  if (prev === 'batches') {
-    document.getElementById('topbar-title').textContent = '📚 SelectionWay';
-    document.getElementById('topbar-badge').style.display = 'none';
-    document.getElementById('search-input').parentElement.style.display = '';
-    showView('batches');
-  }
-  if (viewStack.length <= 1) {
-    document.getElementById('back-btn').classList.remove('visible');
-  }
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+let allBatches = [], filteredBatches = [], activeCat = '';
+let currentBatch = null, currentVideos = [], currentTopic = null;
+let hlsInst = null;
+let stack = ['home'];
+let favorites = JSON.parse(localStorage.getItem('sw_favs') || '[]');
+
+// ══════════════════════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════════════════════
+function esc(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+function isFav(id) { return favorites.includes(String(id)); }
 
-// ─────────────────────────────────────────────────────────────
-// Batches
-// ─────────────────────────────────────────────────────────────
-async function loadBatches() {
-  try {
-    const res = await fetch('/api/batches');
-    if (!res.ok) throw new Error('API error ' + res.status);
-    allBatches = await res.json();
-    filteredBatches = allBatches;
-    renderBatches(allBatches);
-
-    // Check if URL hash requests a specific batch
-    const hash = location.hash;
-    const m = hash.match(/batch=([a-fA-F0-9]{16,32})/);
-    if (m) openBatch(m[1], '');
-  } catch (e) {
-    document.getElementById('batch-list').innerHTML =
-      `<div class="empty-state"><div class="icon">⚠️</div>${e.message}</div>`;
-  }
-}
-
-function renderBatches(batches) {
-  const list = document.getElementById('batch-list');
-  if (!batches.length) {
-    list.innerHTML = '<div class="empty-state"><div class="icon">🔍</div>No batches found.</div>';
-    return;
-  }
-  list.innerHTML = batches.map((b, i) => {
-    const thumb = b.thumb
-      ? `<img class="batch-thumb" src="${esc(b.thumb)}" alt="" loading="lazy"
-            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
-      : '';
-    const placeholder = `<div class="thumb-placeholder" ${b.thumb ? 'style="display:none"' : ''}>📚</div>`;
-    const liveDot = b.liveNow ? '<div class="live-dot"></div>' : '';
-    const liveChip = b.liveNow
-      ? '<span class="chip live">🔴 LIVE</span>'
-      : (b.isLive ? '<span class="chip">⏰ LIVE batch</span>' : '');
-    const priceChip = b.price ? `<span class="chip">₹${esc(String(b.price))}</span>` : '';
-    const classChip = b.totalClass ? `<span class="chip">🎥 ${b.totalClass}</span>` : '';
-
-    return `<div class="batch-card" onclick="openBatch('${esc(b.id)}', '${esc(b.title).replace(/'/g,"&#39;")}')">
-      <div class="batch-thumb-wrap">
-        ${thumb}${placeholder}${liveDot}
-      </div>
-      <div class="batch-info">
-        <div class="batch-cat">${esc(b.category)}</div>
-        <div class="batch-title">${esc(b.title)}</div>
-        <div class="batch-desc">${esc(b.short_desc)}</div>
-        <div class="batch-chips">${liveChip}${priceChip}${classChip}</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function filterBatches(q) {
-  q = q.trim().toLowerCase();
-  if (!q) {
-    filteredBatches = allBatches;
-  } else {
-    filteredBatches = allBatches.filter(b =>
-      (b.title || '').toLowerCase().includes(q) ||
-      (b.category || '').toLowerCase().includes(q) ||
-      (b.short_desc || '').toLowerCase().includes(q)
-    );
-  }
+function toggleFav(id, e) {
+  e && e.stopPropagation();
+  id = String(id);
+  const btn = e && e.currentTarget;
+  if (btn) { btn.classList.add('popping'); setTimeout(() => btn.classList.remove('popping'), 400); }
+  favorites = isFav(id) ? favorites.filter(f => f !== id) : [...favorites, id];
+  localStorage.setItem('sw_favs', JSON.stringify(favorites));
   renderBatches(filteredBatches);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Batch detail
-// ─────────────────────────────────────────────────────────────
-async function openBatch(batchId, title) {
-  viewStack.push('detail');
-  document.getElementById('topbar-title').textContent = title || 'Loading…';
-  document.getElementById('topbar-badge').style.display = 'none';
-  document.getElementById('search-input').parentElement.style.display = 'none';
-  document.getElementById('back-btn').classList.add('visible');
+// ══════════════════════════════════════════════════════════════
+// SKELETON HTML
+// ══════════════════════════════════════════════════════════════
+function skeletonCards(n) {
+  return Array.from({length:n}, () => `
+    <div class="skel-card">
+      <div class="skel skel-img"></div>
+      <div class="skel skel-line" style="width:45%"></div>
+      <div class="skel skel-line short"></div>
+      <div class="skel skel-line thin" style="margin-bottom:14px"></div>
+    </div>`).join('');
+}
 
-  // Reset tabs
-  showTab('classes');
-  document.getElementById('tab-classes').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
-  document.getElementById('tab-sheets').innerHTML = '';
-  document.getElementById('tab-tests').innerHTML = '';
-  document.getElementById('batch-hero').innerHTML = '';
-  showView('detail');
+// ══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════════════
+function navTo(pageName) {
+  const cur = document.getElementById('page-' + stack[stack.length-1]);
+  const next = document.getElementById('page-' + pageName);
+  if (!next || next === cur) return;
 
-  try {
-    const res = await fetch(`/api/batch/${encodeURIComponent(batchId)}/classes`);
-    if (!res.ok) throw new Error('API error ' + res.status);
-    const data = await res.json();
+  stack.push(pageName);
+  if (cur) cur.classList.remove('active');
+  next.classList.remove('slide-back');
+  next.classList.add('active');
+  next.scrollTop = 0;
+  syncHeader();
+}
 
-    currentBatch = data;
-    currentVideos = data.video_links || [];
+function navBack() {
+  if (stack.length <= 1) return;
+  const cur = document.getElementById('page-' + stack.pop());
+  const prev = document.getElementById('page-' + stack[stack.length-1]);
 
-    // Update topbar
-    const title2 = (data.batch_meta || {}).title || title;
-    document.getElementById('topbar-title').textContent = title2;
-    const badge = currentVideos.length;
-    if (badge) {
-      document.getElementById('topbar-badge').textContent = badge + ' classes';
-      document.getElementById('topbar-badge').style.display = '';
-    }
+  if (cur) {
+    cur.classList.add('slide-back');
+    cur.classList.remove('active');
+  }
+  if (prev) { prev.classList.add('active'); }
+  syncHeader();
+}
 
-    renderHero(data.batch_meta);
-    renderClassesTab(data.topics);
-    renderSheetsTab(data.pdf_links || []);
-    renderTestsTab(data.test_links || []);
-  } catch (e) {
-    document.getElementById('tab-classes').innerHTML =
-      `<div class="empty-state"><div class="icon">⚠️</div>${e.message}</div>`;
+function syncHeader() {
+  const cur = stack[stack.length - 1];
+  const onHome = cur === 'home';
+
+  document.getElementById('back-btn').classList.toggle('show', !onHome);
+  document.getElementById('logo').style.display   = onHome ? '' : 'none';
+  document.getElementById('hdr-title').style.display = onHome ? 'none' : '';
+  document.getElementById('filter-bar').classList.toggle('hidden', !onHome);
+
+  const title = document.getElementById('hdr-title');
+  const cnt   = document.getElementById('hdr-count');
+
+  if (cur === 'batch' && currentBatch) {
+    title.textContent = (currentBatch.batch_meta || {}).title || '…';
+    cnt.style.display = 'none';
+  } else if (cur === 'topic' && currentTopic) {
+    title.textContent = currentTopic.name || '…';
+    const n = (currentTopic.classes || []).length;
+    cnt.textContent = n + ' classes';
+    cnt.style.display = n ? '' : 'none';
+  } else {
+    cnt.style.display = 'none';
   }
 }
 
-function renderHero(meta) {
-  if (!meta) return;
-  const thumb = meta.thumb
-    ? `<img class="hero-thumb" src="${esc(meta.thumb)}" alt=""
-          onerror="this.style.display='none'">`
-    : '';
-  const chips = [
-    meta.price ? `<span class="hero-chip">💰 ₹${esc(String(meta.price))}</span>` : '',
-    meta.validity ? `<span class="hero-chip">📅 ${esc(String(meta.validity))}</span>` : '',
-    meta.faculty ? `<span class="hero-chip">👨‍🏫 ${esc(meta.faculty)}</span>` : '',
-  ].filter(Boolean).join('');
-
-  document.getElementById('batch-hero').innerHTML = `
-    <div class="batch-hero">
-      ${thumb}
-      <div class="hero-cat">${esc(meta.category)}</div>
-      <div class="hero-title">${esc(meta.title)}</div>
-      ${meta.short_desc ? `<div class="hero-desc">${esc(meta.short_desc)}</div>` : ''}
-      ${chips ? `<div class="hero-chips">${chips}</div>` : ''}
-    </div>
-  `;
+// ══════════════════════════════════════════════════════════════
+// CATEGORY CHIPS
+// ══════════════════════════════════════════════════════════════
+function buildCatChips(batches) {
+  const seen = new Set();
+  const cats = [];
+  batches.forEach(b => {
+    const c = (b.category || '').trim();
+    if (c && !seen.has(c)) { seen.add(c); cats.push(c); }
+  });
+  const bar = document.getElementById('cat-chips');
+  const existing = bar.querySelectorAll('.cat-chip:not([data-cat=""])');
+  existing.forEach(e => e.remove());
+  cats.slice(0,12).forEach(cat => {
+    const st = catStyle(cat);
+    const chip = document.createElement('div');
+    chip.className = 'cat-chip';
+    chip.dataset.cat = cat;
+    chip.textContent = st.icon + ' ' + cat;
+    chip.onclick = () => selectCat(chip, cat);
+    bar.appendChild(chip);
+  });
 }
 
-function renderClassesTab(topics) {
-  if (!topics || !topics.length) {
-    document.getElementById('tab-classes').innerHTML =
-      '<div class="empty-state"><div class="icon">📭</div>No classes yet.</div>';
+function selectCat(el, cat) {
+  document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  const st = catStyle(cat);
+  el.style.background = cat ? st.bg : 'var(--lift)';
+  el.style.color = cat ? st.text : '';
+  // reset others
+  document.querySelectorAll('.cat-chip:not(.active)').forEach(c => {
+    c.style.background = ''; c.style.color = '';
+  });
+  activeCat = cat;
+  const q = document.getElementById('search-input').value.trim().toLowerCase();
+  applyFilters(q, cat);
+}
+
+// ══════════════════════════════════════════════════════════════
+// LOAD BATCHES
+// ══════════════════════════════════════════════════════════════
+async function loadBatches() {
+  document.getElementById('batch-list').innerHTML = skeletonCards(5);
+  try {
+    const res = await fetch('/bot-api/batches');
+    if (!res.ok) throw new Error('Server error ' + res.status);
+    allBatches = await res.json();
+    filteredBatches = allBatches;
+    buildCatChips(allBatches);
+    renderBatches(allBatches);
+    const m = location.hash.match(/batch=([a-zA-Z0-9_\-]{6,})/);
+    if (m) openBatch(m[1], '');
+  } catch(err) {
+    document.getElementById('batch-list').innerHTML =
+      `<div class="empty-state"><div class="ei">⚠️</div>${err.message}</div>`;
+  }
+}
+
+function filterBatches(q) {
+  applyFilters(q.trim().toLowerCase(), activeCat);
+}
+
+function applyFilters(q, cat) {
+  filteredBatches = allBatches.filter(b => {
+    const matchCat = !cat || (b.category||'').trim() === cat;
+    const matchQ   = !q   ||
+      (b.title||'').toLowerCase().includes(q) ||
+      (b.faculty||'').toLowerCase().includes(q) ||
+      (b.category||'').toLowerCase().includes(q);
+    return matchCat && matchQ;
+  });
+  renderBatches(filteredBatches);
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER BATCHES
+// ══════════════════════════════════════════════════════════════
+function renderBatches(batches) {
+  const favs = batches.filter(b => isFav(b.id));
+  const rest = batches.filter(b => !isFav(b.id));
+
+  document.getElementById('fav-section').innerHTML = favs.length
+    ? `<div class="section-hdr">⭐ Favourites</div>
+       <div class="batch-grid">${favs.map(batchCard).join('')}</div>`
+    : '';
+
+  if (!rest.length && !favs.length) {
+    document.getElementById('batch-list').innerHTML =
+      '<div class="empty-state"><div class="ei">🔍</div>No batches found.</div>';
     return;
   }
 
-  const html = topics.map((topic, ti) => {
-    const rows = topic.classes.map(cls => {
-      const video = currentVideos[cls.video_index];
-      const icon  = video && video.video_type === 'mp4' ? '🎬'
-                  : video && video.video_type === 'youtube' ? '▶️'
-                  : video && video.video_type === 'hls' ? '📡'
-                  : '📖';
-      const liveB = cls.live ? '<span class="live-badge">🔴 LIVE</span> ' : '';
-      const meta  = [cls.duration_text, cls.date_text].filter(Boolean).join(' · ');
-      const playable = video && video.playable;
-      const actionIcon = playable ? '<span class="play-icon">▶</span>' : '<span class="no-video">—</span>';
+  const label = favs.length ? '<div class="section-hdr">All Batches</div>' : '';
+  document.getElementById('batch-list').innerHTML = rest.length
+    ? label + '<div class="batch-grid">' + rest.map(batchCard).join('') + '</div>'
+    : '';
 
-      return `<div class="lecture-row" ${playable ? `onclick="playVideo(${cls.video_index})"` : ''}>
-        <span class="lecture-icon">${icon}</span>
-        <div class="lecture-info">
-          <div class="lecture-title">${liveB}${esc(cls.title)}</div>
-          ${meta ? `<div class="lecture-meta">${esc(meta)}</div>` : ''}
-        </div>
-        ${actionIcon}
-      </div>`;
-    }).join('');
+  // lazy-load images
+  document.querySelectorAll('.card-img-wrap img[data-src]').forEach(img => {
+    lazyImg(img);
+  });
+}
 
-    const isFirst = ti === 0;
-    return `<div class="topic-group">
-      <button class="topic-header ${isFirst ? 'open' : ''}" onclick="toggleTopic(this)">
-        <span class="topic-name">${esc(topic.name)}</span>
-        ${topic.teacher ? `<span class="topic-teacher">${esc(topic.teacher)}</span>` : ''}
-        <span class="topic-count">${topic.classes.length} classes</span>
-        <span class="chevron">›</span>
+function lazyImg(img) {
+  if (!img.dataset.src) return;
+  const src = img.dataset.src;
+  img.onload  = () => img.classList.add('loaded');
+  img.onerror = () => img.style.display = 'none';
+  img.src = src;
+  delete img.dataset.src;
+}
+
+function batchCard(b) {
+  const faved = isFav(b.id);
+  const st    = catStyle(b.category);
+  const idStr = esc(b.id);
+
+  const imgHtml = b.thumb
+    ? `<img data-src="${esc(b.thumb)}" alt="">`
+    : '';
+  const ph = `<div class="card-placeholder">${st.icon}</div>`;
+  const liveBadge = b.liveNow ? '<div class="card-live-badge">🔴 LIVE</div>' : '';
+
+  const meta = [
+    b.faculty    ? `<span>👨‍🏫 ${esc(b.faculty)}</span>`            : '',
+    b.totalClass ? `<span>🎥 ${b.totalClass} classes</span>`       : '',
+    b.price      ? `<span>💰 ₹${esc(String(b.price))}</span>`      : '',
+  ].filter(Boolean).join('');
+
+  return `
+  <div class="batch-card${faved ? ' faved' : ''}"
+       onclick="openBatch('${idStr}','${esc(b.title).replace(/'/g,"\\'")}')">
+    <div class="card-img-wrap">
+      ${imgHtml}${ph}
+      <div class="card-overlay"></div>
+      ${liveBadge}
+      <button class="fav-btn${faved ? ' on' : ''}"
+              onclick="toggleFav('${idStr}',event)">
+        ${faved ? '⭐' : '🤍'}
       </button>
-      <div class="topic-body" ${isFirst ? '' : 'hidden'}>
-        ${rows}
+    </div>
+    <div class="card-meta">
+      <div class="card-cat-chip"
+           style="background:${st.bg};color:${st.text}">
+        ${st.icon} ${esc(b.category)}
+      </div>
+      <div class="card-title">${esc(b.title)}</div>
+      ${meta ? `<div class="card-foot">${meta}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// OPEN BATCH
+// ══════════════════════════════════════════════════════════════
+async function openBatch(batchId, title) {
+  currentBatch = null; currentVideos = [];
+  document.getElementById('batch-hero').innerHTML =
+    '<div class="spinner-wrap"><div class="spinner"></div></div>';
+  document.getElementById('topic-cards').innerHTML = '';
+  navTo('batch');
+
+  try {
+    const res = await fetch(`/bot-api/batch/${encodeURIComponent(batchId)}/classes`);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    currentBatch  = await res.json();
+    currentVideos = currentBatch.video_links || [];
+    renderBatchDetail(currentBatch);
+  } catch(err) {
+    document.getElementById('batch-hero').innerHTML =
+      `<div class="empty-state"><div class="ei">⚠️</div>${err.message}</div>`;
+  }
+}
+
+function renderBatchDetail(data) {
+  const meta = data.batch_meta || {};
+  const st   = catStyle(meta.category);
+
+  // Hero
+  const heroEl = document.getElementById('batch-hero');
+  heroEl.innerHTML = `
+    <div class="detail-hero">
+      <div class="hero-bg" ${meta.thumb ? `style="background-image:url('${esc(meta.thumb)}')"` : ''}></div>
+      <div class="hero-fg">
+        ${meta.thumb
+          ? `<img class="hero-thumb" src="${esc(meta.thumb)}" alt=""
+                  onerror="this.outerHTML='<div class=hero-thumb-placeholder>${st.icon}</div>'">`
+          : `<div class="hero-thumb-placeholder">${st.icon}</div>`}
+        <div class="hero-cat" style="color:${st.bg}">${esc(meta.category)}</div>
+        <div class="hero-title">${esc(meta.title)}</div>
+        <div class="hero-chips">
+          ${meta.faculty   ? `<span class="hero-chip">👨‍🏫 ${esc(meta.faculty)}</span>`   : ''}
+          ${meta.price     ? `<span class="hero-chip">💰 ₹${esc(String(meta.price))}</span>` : ''}
+          ${meta.validity  ? `<span class="hero-chip">📅 ${esc(String(meta.validity))}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+
+  // Topics
+  const topics = data.topics || [];
+  if (!topics.length) {
+    document.getElementById('topic-cards').innerHTML =
+      '<div class="empty-state"><div class="ei">📭</div>No classes yet.</div>';
+    syncHeader(); return;
+  }
+
+  document.getElementById('topic-cards').innerHTML = topics.map((t, i) => {
+    const icon = TOPIC_ICONS[i % TOPIC_ICONS.length];
+    const cnt  = (t.classes || []).length;
+    const sub  = [t.teacher, cnt + (cnt===1?' class':' classes')].filter(Boolean).join(' · ');
+    return `
+    <div class="topic-card" onclick="openTopic(${i})">
+      <div class="topic-icon-box"
+           style="background:${st.bg}22;color:${st.bg}">${icon}</div>
+      <div class="topic-text">
+        <div class="topic-name">${esc(t.name)}</div>
+        <div class="topic-sub">${esc(sub)}</div>
+      </div>
+      <div class="topic-right">
+        <span class="topic-count"
+              style="background:${st.bg}22;color:${st.bg}">${cnt}</span>
+        <span class="topic-arrow">›</span>
       </div>
     </div>`;
   }).join('');
 
-  document.getElementById('tab-classes').innerHTML = html;
+  syncHeader();
 }
 
-function renderSheetsTab(pdfs) {
-  if (!pdfs.length) {
-    document.getElementById('tab-sheets').innerHTML =
-      '<div class="empty-state"><div class="icon">📭</div>No sheets yet.</div>';
-    return;
-  }
-  const byTopic = {};
-  pdfs.forEach(p => {
-    const t = p.topic || 'General';
-    (byTopic[t] = byTopic[t] || []).push(p);
-  });
-  const html = Object.entries(byTopic).map(([topic, items]) =>
-    `<div class="resource-section">
-      <h4>${esc(topic)}</h4>
-      ${items.map(p => `<div class="resource-item">
-        <a href="${esc(p.url)}" target="_blank" rel="noopener">📄 ${esc(p.name)}</a>
-      </div>`).join('')}
-    </div>`
-  ).join('');
-  document.getElementById('tab-sheets').innerHTML = html;
+// ══════════════════════════════════════════════════════════════
+// OPEN TOPIC
+// ══════════════════════════════════════════════════════════════
+function openTopic(idx) {
+  currentTopic = (currentBatch && currentBatch.topics || [])[idx];
+  if (!currentTopic) return;
+
+  const meta = currentBatch.batch_meta || {};
+  const st   = catStyle(meta.category);
+  const cnt  = (currentTopic.classes || []).length;
+  const icon = TOPIC_ICONS[idx % TOPIC_ICONS.length];
+
+  document.getElementById('lview-hero').innerHTML = `
+    <div class="lview-hero">
+      <div class="lview-icon"
+           style="background:${st.bg}22;color:${st.bg}">${icon}</div>
+      <div class="lview-info">
+        <div class="lview-name">${esc(currentTopic.name)}</div>
+        ${currentTopic.teacher
+          ? `<div class="lview-teacher">👨‍🏫 ${esc(currentTopic.teacher)}</div>` : ''}
+      </div>
+      <div class="lview-badge">${cnt} ${cnt===1?'class':'classes'}</div>
+    </div>`;
+
+  const classes = currentTopic.classes || [];
+  document.getElementById('lec-list').innerHTML = classes.length
+    ? classes.map((cls, i) => {
+        const vid     = currentVideos[cls.video_index];
+        const play    = !!(vid && vid.playable);
+        const meta2   = [cls.duration_text, cls.date_text].filter(Boolean).join(' · ');
+        const liveTg  = cls.live ? '<span class="live-tag">🔴 LIVE</span>' : '';
+        return `
+        <div class="lec-card ${play ? 'playable' : 'dark'}"
+             ${play ? `onclick="playVideo(${cls.video_index})"` : ''}>
+          <div class="lec-num">${i+1}</div>
+          <div class="lec-text">
+            <div class="lec-title">${liveTg}${esc(cls.title)}</div>
+            ${meta2 ? `<div class="lec-meta">${esc(meta2)}</div>` : ''}
+          </div>
+          ${play ? '<div class="play-dot">▶</div>' : ''}
+        </div>`;
+      }).join('')
+    : '<div class="empty-state"><div class="ei">📭</div>No lectures yet.</div>';
+
+  navTo('topic');
 }
 
-function renderTestsTab(tests) {
-  if (!tests.length) {
-    document.getElementById('tab-tests').innerHTML =
-      '<div class="empty-state"><div class="icon">📭</div>No tests yet.</div>';
-    return;
-  }
-  const byTopic = {};
-  tests.forEach(t => {
-    const tp = t.topic || 'General';
-    (byTopic[tp] = byTopic[tp] || []).push(t);
-  });
-  const html = Object.entries(byTopic).map(([topic, items]) =>
-    `<div class="resource-section">
-      <h4>${esc(topic)}</h4>
-      ${items.map(t => `<div class="resource-item">
-        ${t.url ? `<a href="${esc(t.url)}" target="_blank" rel="noopener">📝 ${esc(t.name)}</a>`
-                : `<span style="color:var(--hint)">📝 ${esc(t.name)}</span>`}
-      </div>`).join('')}
-    </div>`
-  ).join('');
-  document.getElementById('tab-tests').innerHTML = html;
-}
-
-function showTab(name) {
-  ['classes', 'sheets', 'tests'].forEach(t => {
-    document.getElementById('tab-btn-' + t).classList.toggle('active', t === name);
-    document.getElementById('tab-' + t).classList.toggle('active', t === name);
-  });
-}
-
-function toggleTopic(btn) {
-  const body = btn.nextElementSibling;
-  const hidden = body.hasAttribute('hidden');
-  if (hidden) { body.removeAttribute('hidden'); btn.classList.add('open'); }
-  else         { body.setAttribute('hidden', ''); btn.classList.remove('open'); }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Video Player
-// ─────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// VIDEO PLAYER
+// ══════════════════════════════════════════════════════════════
 function playVideo(idx) {
-  const video = currentVideos[idx];
-  if (!video || !video.playable) return;
+  const vid = currentVideos[idx];
+  if (!vid || !vid.playable) return;
+  if (hlsInst) { hlsInst.destroy(); hlsInst = null; }
 
-  // Clean up any existing HLS instance
-  if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+  document.getElementById('player-title').textContent = vid.title;
+  document.getElementById('player-msg').innerHTML = '';
+  document.getElementById('video-wrap').innerHTML = '';
+  document.getElementById('player').classList.add('open');
 
-  document.getElementById('player-title').textContent   = video.title;
-  document.getElementById('player-quality').textContent = video.quality || '';
-  document.getElementById('player-status').innerHTML    = '';
-  document.getElementById('player-actions').innerHTML   = '';
-
-  const wrap = document.getElementById('video-wrap');
-  wrap.innerHTML = '';
-
-  const modal = document.getElementById('player-modal');
-  modal.classList.add('open');
-
-  if (video.video_type === 'mp4') {
-    playMp4(video, wrap);
-  } else if (video.video_type === 'youtube') {
-    playYouTube(video, wrap);
-  } else if (video.video_type === 'hls') {
-    playHLS(video, wrap);
-  }
+  if      (vid.video_type === 'mp4')     playMp4(vid);
+  else if (vid.video_type === 'youtube') playYT(vid);
+  else if (vid.video_type === 'hls')     playHLS(vid);
 }
 
-function playMp4(video, wrap) {
-  const urls    = video.mp4_urls || [];
-  if (!urls.length) {
-    setStatus('❌ No video URL available.', urls);
-    return;
-  }
+function playMp4(vid) {
+  const urls = vid.mp4_urls || [];
+  if (!urls.length) { playerMsg('❌ No video URL available.', []); return; }
 
   const el = document.createElement('video');
-  el.controls     = true;
-  el.playsInline  = true;
-  el.style.width  = '100%';
-  el.style.height = '100%';
-  el.style.background = '#000';
-  wrap.appendChild(el);
+  el.controls = true; el.playsInline = true;
+  el.style.cssText = 'width:100%;height:100%;background:#000';
+  document.getElementById('video-wrap').appendChild(el);
 
-  let qIdx = 0;
-  let usedProxy = false;
-
-  function tryLoad(url) {
-    el.src = url;
-    el.load();
-    el.play().catch(() => {});
-  }
-
-  function nextUrl() {
-    qIdx++;
-    if (qIdx < urls.length) {
-      setStatusMsg(`⟳ Trying lower quality…`);
-      tryLoad(urls[qIdx]);
-    } else if (!usedProxy) {
-      // Try proxying the first URL through our server
-      usedProxy = true;
-      qIdx = 0;
-      setStatusMsg('⟳ Retrying via proxy…');
+  let qi = 0, proxied = false;
+  function tryLoad(url) { el.src = url; el.load(); el.play().catch(() => {}); }
+  el.addEventListener('error', function next() {
+    qi++;
+    if (qi < urls.length) {
+      tryLoad(urls[qi]);
+    } else if (!proxied) {
+      proxied = true; qi = 0;
       tryLoad('/proxy-video?url=' + encodeURIComponent(urls[0]));
     } else {
-      wrap.innerHTML = '';
-      setStatus('❌ Video could not be loaded. Try opening directly:', urls);
+      document.getElementById('video-wrap').innerHTML = '';
+      playerMsg('❌ Could not load video. Try opening directly:', urls);
     }
-  }
-
-  el.addEventListener('error', nextUrl);
+  });
   tryLoad(urls[0]);
 }
 
-function playYouTube(video, wrap) {
-  const m = (video.url || '').match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
-  const ytId = m ? m[1] : '';
-  if (!ytId) { setStatus('❌ Could not extract YouTube ID.', []); return; }
-  const iframe = document.createElement('iframe');
-  iframe.src = `https://www.youtube.com/embed/${ytId}?autoplay=1`;
-  iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen';
-  iframe.allowFullscreen = true;
-  iframe.style.width = '100%';
-  iframe.style.height = '100%';
-  iframe.style.border = '0';
-  wrap.appendChild(iframe);
+function playYT(vid) {
+  const m = (vid.url||'').match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+  if (!m) { playerMsg('❌ Bad YouTube URL.', []); return; }
+  const f = document.createElement('iframe');
+  f.src = `https://www.youtube.com/embed/${m[1]}?autoplay=1`;
+  f.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen';
+  f.allowFullscreen = true;
+  f.style.cssText = 'width:100%;height:100%;border:0';
+  document.getElementById('video-wrap').appendChild(f);
 }
 
-function playHLS(video, wrap) {
-  const url = video.url; // already proxied on server side
-  const v   = document.createElement('video');
-  v.controls    = true;
-  v.playsInline = true;
-  v.style.width  = '100%';
-  v.style.height = '100%';
-  v.style.background = '#000';
-  wrap.appendChild(v);
-
+function playHLS(vid) {
+  const v = document.createElement('video');
+  v.controls = true; v.playsInline = true;
+  v.style.cssText = 'width:100%;height:100%;background:#000';
+  document.getElementById('video-wrap').appendChild(v);
+  const url = vid.url;
   if (v.canPlayType('application/vnd.apple.mpegurl')) {
-    // Safari native HLS
-    v.src = url;
-    v.play().catch(() => {});
+    v.src = url; v.play().catch(() => {});
   } else if (window.Hls && Hls.isSupported()) {
-    hlsInstance = new Hls({ debug: false });
-    hlsInstance.loadSource(url);
-    hlsInstance.attachMedia(v);
-    hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
-    hlsInstance.on(Hls.Events.ERROR, (_, data) => {
-      if (data.fatal) {
-        wrap.innerHTML = '';
-        setStatus('❌ Stream could not be loaded.', video.raw_url ? [video.raw_url] : []);
+    hlsInst = new Hls({ debug: false });
+    hlsInst.loadSource(url); hlsInst.attachMedia(v);
+    hlsInst.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
+    hlsInst.on(Hls.Events.ERROR, (_, d) => {
+      if (d.fatal) {
+        document.getElementById('video-wrap').innerHTML = '';
+        playerMsg('❌ Stream failed.', vid.raw_url ? [vid.raw_url] : []);
       }
     });
   } else {
-    wrap.innerHTML = '';
-    setStatus('❌ Your browser cannot play this stream. Try Safari.', []);
+    document.getElementById('video-wrap').innerHTML = '';
+    playerMsg('❌ Your browser cannot play this stream. Try Safari.', []);
   }
 }
 
-function setStatusMsg(msg) {
-  document.getElementById('player-status').textContent = msg;
-}
-
-function setStatus(msg, urls) {
-  document.getElementById('player-status').innerHTML = msg +
-    (urls && urls.length ? '<br>' + urls.map(u =>
-      `<a href="${esc(u)}" target="_blank">↗ Open directly</a>`
-    ).join('  ') : '');
+function playerMsg(msg, urls) {
+  document.getElementById('player-msg').innerHTML = msg +
+    (urls && urls.length
+      ? '<br><br>' + urls.map(u => `<a href="${esc(u)}" target="_blank">↗ Open directly</a>`).join(' &ensp; ')
+      : '');
 }
 
 function closePlayer() {
-  const modal = document.getElementById('player-modal');
-  modal.classList.remove('open');
-  if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+  document.getElementById('player').classList.remove('open');
   document.getElementById('video-wrap').innerHTML = '';
+  if (hlsInst) { hlsInst.destroy(); hlsInst = null; }
 }
-
-// Close on backdrop click
-document.getElementById('player-modal').addEventListener('click', function(e) {
-  if (e.target === this || e.target === this.querySelector('.player-body')) closePlayer();
+document.getElementById('player').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closePlayer();
 });
 
-// ─────────────────────────────────────────────────────────────
-// Utils
-// ─────────────────────────────────────────────────────────────
-function esc(str) {
-  if (str == null) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-// ─────────────────────────────────────────────────────────────
-// Init
-// ─────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════════════════════
 loadBatches();
 </script>
 </body>
