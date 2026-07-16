@@ -1091,7 +1091,9 @@ async def post_init(application):
 # ─────────────────────────────────────────────────────────────────
 
 def run_bot():
-    """Run the Telegram bot in its own thread (with its own event loop)."""
+    """Run the Telegram bot in its own thread (with its own event loop).
+    Uses the low-level async API so signal handlers (main-thread-only) are avoided.
+    """
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
@@ -1106,8 +1108,16 @@ def run_bot():
     application.add_handler(CallbackQueryHandler(button_handler))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    logger.info("Telegram bot polling…")
-    application.run_polling(close_loop=False)
+    async def _run():
+        async with application:
+            await application.start()
+            await application.updater.start_polling()
+            logger.info("Telegram bot polling…")
+            # Block forever — daemon thread is killed when Flask exits
+            stop_signal = asyncio.Event()
+            await stop_signal.wait()
+
+    loop.run_until_complete(_run())
 
 
 def main():
