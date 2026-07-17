@@ -701,8 +701,16 @@ function renderBatches(batches){
 function loadImg(img){
   const src=img.dataset.s;if(!src)return;
   img.onload=()=>img.classList.add('rdy');
-  img.onerror=()=>img.style.display='none';
-  img.src=src;img.removeAttribute('data-s');
+  img.onerror=()=>{
+    // Direct URL blocked by browser CSP? Try via proxy
+    if(!img.src.includes('/proxy-img')){
+      img.src='/proxy-img?url='+encodeURIComponent(src);
+    }else{
+      img.style.display='none'; // Both failed — show emoji placeholder
+    }
+  };
+  img.src=src;
+  img.removeAttribute('data-s');
 }
 
 function cardHtml(b,idx){
