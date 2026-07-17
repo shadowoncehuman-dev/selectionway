@@ -603,8 +603,6 @@ def api_batches():
         thumb = (b.get("banner") or b.get("bannerSquare") or
                  b.get("bannerLandscape") or b.get("thumbnail") or
                  b.get("image") or b.get("coverImage") or b.get("photo") or "")
-        if thumb:
-            thumb = f"/proxy-img?url={quote(thumb, safe='')}"
         live_now = is_batch_live_now(b)
         slim.append({
             "id":          b.get("id"),
@@ -639,12 +637,9 @@ def api_batch_classes(batch_id):
 
     result = build_classes_data(classes_data, batch_meta)
 
-    # Proxy thumbnails in batch_meta before sending
     thumb = (batch_meta.get("banner") or batch_meta.get("bannerSquare") or
              batch_meta.get("bannerLandscape") or batch_meta.get("thumbnail") or
              batch_meta.get("image") or batch_meta.get("coverImage") or batch_meta.get("photo") or "")
-    if thumb:
-        thumb = f"/proxy-img?url={quote(thumb, safe='')}"
 
     cat = (batch_meta.get("mainCategory") or {}).get("mainCategoryName", "")
     desc_items = batch_meta.get("description") or []

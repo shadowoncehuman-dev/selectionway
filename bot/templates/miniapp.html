@@ -2,1114 +2,926 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>SelectionWay</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
 <style>
-/* ═══════════════════════════════════════════════════════════
-   DESIGN SYSTEM
-═══════════════════════════════════════════════════════════ */
-:root {
-  --bg:        #060912;
-  --surface:   #0d1121;
-  --lift:      #141a2e;
-  --lift2:     #1c2440;
-  --border:    rgba(255,255,255,0.07);
-  --border2:   rgba(255,255,255,0.12);
-
-  --accent:    #7c63ff;
-  --accent-lo: rgba(124,99,255,0.14);
-  --accent-hi: rgba(124,99,255,0.32);
-
-  --text:      #f0f4ff;
-  --sub:       #7a8aad;
-  --muted:     #3d4e6a;
-
-  --live:      #ff4757;
-  --green:     #23d18b;
-  --gold:      #fbbf24;
-
-  --r:  14px;
-  --r2:  9px;
-  --r3: 50px;
-
-  --dur: 0.26s;
-  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+/* ════════════════════════════════════════════════════════
+   TOKENS
+════════════════════════════════════════════════════════ */
+:root{
+  /* Surface */
+  --bg:     #05040b;
+  --s0:     #09070f;
+  --s1:     #0f0d1a;
+  --s2:     #171425;
+  --s3:     #201d31;
+  /* Accent */
+  --a:      #f97316;
+  --a10:    rgba(249,115,22,.10);
+  --a20:    rgba(249,115,22,.20);
+  --a40:    rgba(249,115,22,.40);
+  /* Text */
+  --t0:     #f0eeff;
+  --t1:     #7a6ea8;
+  --t2:     #3d3560;
+  /* Chrome */
+  --bdr:    rgba(255,255,255,.06);
+  --bdr2:   rgba(255,255,255,.12);
+  /* Semantic */
+  --live:   #ff3c5a;
+  --ok:     #23d18b;
+  /* Radius */
+  --rc:16px;--rb:10px;--rp:100px;
+  /* Easing */
+  --spring: cubic-bezier(.34,1.56,.64,1);
+  --ease:   cubic-bezier(.22,.61,.36,1);
 }
 
-*, *::before, *::after {
-  box-sizing: border-box; margin: 0; padding: 0;
-  -webkit-tap-highlight-color: transparent;
+/* ════════════════════════════════════════════════════════
+   RESET + BASE
+════════════════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{overflow:hidden;height:100%}
+body{
+  font-family:-apple-system,'SF Pro Display','Segoe UI',sans-serif;
+  background:var(--bg);color:var(--t0);
+  height:100%;overflow:hidden;
+  -webkit-font-smoothing:antialiased;
 }
 
-html { overflow-x: hidden; }
-
-body {
-  font-family: -apple-system, 'SF Pro Display', 'Segoe UI', Roboto, Arial, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* ═══════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════════
    HEADER
-═══════════════════════════════════════════════════════════ */
-#header {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  height: 56px;
-  display: flex; align-items: center; gap: 10px;
-  padding: 0 14px;
-  background: rgba(6,9,18,0.88);
-  backdrop-filter: blur(28px) saturate(1.6);
-  -webkit-backdrop-filter: blur(28px) saturate(1.6);
-  border-bottom: 1px solid var(--border);
-  transition: background var(--dur);
+════════════════════════════════════════════════════════ */
+#hdr{
+  position:fixed;top:0;left:0;right:0;z-index:80;
+  height:52px;
+  display:flex;align-items:center;gap:10px;padding:0 14px;
+  background:rgba(5,4,11,.9);
+  backdrop-filter:blur(24px) saturate(1.8);
+  -webkit-backdrop-filter:blur(24px) saturate(1.8);
+  border-bottom:1px solid var(--bdr);
+}
+#back{
+  width:32px;height:32px;border-radius:50%;
+  background:var(--s2);border:1px solid var(--bdr2);
+  color:var(--t0);font-size:1.1rem;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;
+  opacity:0;pointer-events:none;
+  transition:opacity .2s,transform .12s;
+}
+#back.show{opacity:1;pointer-events:all}
+#back:active{transform:scale(.86)}
+
+#brand{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
+#brand-name{
+  font-size:.98rem;font-weight:800;letter-spacing:-.03em;
+  background:linear-gradient(90deg,#fff 40%,#c4b5fd 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text
+}
+#brand-sub{
+  font-size:.55rem;font-weight:700;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--a);margin-top:1px
+}
+#hdr-title{
+  flex:1;min-width:0;font-size:.9rem;font-weight:700;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:none
+}
+#hdr-badge{
+  background:var(--a);color:#fff;
+  font-size:.66rem;font-weight:800;
+  padding:3px 11px;border-radius:var(--rp);
+  display:none;white-space:nowrap;flex-shrink:0
 }
 
-#back-btn {
-  width: 34px; height: 34px; border-radius: 50%;
-  background: var(--lift); border: 1px solid var(--border2);
-  color: var(--text); font-size: 1.15rem; line-height: 1;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; flex-shrink: 0;
-  opacity: 0; pointer-events: none;
-  transition: opacity var(--dur), transform 0.15s;
+/* ════════════════════════════════════════════════════════
+   SEARCH + CAT BAR (home only)
+════════════════════════════════════════════════════════ */
+#topbar{
+  position:fixed;top:52px;left:0;right:0;z-index:70;
+  background:rgba(5,4,11,.85);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--bdr);
+  transition:transform .24s var(--ease),opacity .2s;
 }
-#back-btn.show { opacity: 1; pointer-events: all; }
-#back-btn:active { transform: scale(0.88); }
+#topbar.off{transform:translateY(-100%);opacity:0;pointer-events:none}
 
-#logo {
-  flex: 1; min-width: 0;
-  display: flex; flex-direction: column; justify-content: center;
+.search-row{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 14px 7px;
 }
-#logo-name {
-  font-size: 1rem; font-weight: 800; letter-spacing: -0.02em;
-  background: linear-gradient(90deg, #fff 30%, #c4b5fd 100%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
+.si{color:var(--t1);flex-shrink:0;width:16px}
+#q{
+  flex:1;background:none;border:none;outline:none;
+  color:var(--t0);font-size:.86rem;caret-color:var(--a)
 }
-#logo-sub {
-  font-size: 0.58rem; font-weight: 700; letter-spacing: 0.14em;
-  text-transform: uppercase; color: var(--accent); margin-top: 1px;
+#q::placeholder{color:var(--t2)}
+.chips{
+  display:flex;gap:6px;padding:0 12px 9px;
+  overflow-x:auto;scrollbar-width:none
 }
+.chips::-webkit-scrollbar{display:none}
+.chip{
+  flex-shrink:0;padding:5px 13px;border-radius:var(--rp);
+  border:1px solid var(--bdr2);background:var(--s1);
+  color:var(--t1);font-size:.72rem;font-weight:600;
+  white-space:nowrap;cursor:pointer;
+  transition:all .14s;
+}
+.chip:active{transform:scale(.92)}
+.chip.on{color:#fff;border-color:transparent}
 
-#hdr-title {
-  flex: 1; min-width: 0;
-  font-size: 0.95rem; font-weight: 700;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  display: none;
-}
-#hdr-count {
-  background: var(--accent); color: #fff;
-  font-size: 0.68rem; font-weight: 700;
-  padding: 3px 10px; border-radius: var(--r3);
-  display: none; white-space: nowrap;
-}
-
-/* ═══════════════════════════════════════════════════════════
-   SEARCH + FILTER BAR
-═══════════════════════════════════════════════════════════ */
-#filter-bar {
-  position: fixed; top: 56px; left: 0; right: 0; z-index: 90;
-  background: rgba(6,9,18,0.82);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border);
-  transition: transform var(--dur) var(--ease);
-}
-#filter-bar.hidden { transform: translateY(-100%); pointer-events: none; }
-
-.search-row {
-  display: flex; align-items: center; gap: 9px;
-  padding: 10px 14px 8px;
-}
-.search-icon { color: var(--sub); flex-shrink: 0; }
-#search-input {
-  flex: 1; background: none; border: none; outline: none;
-  color: var(--text); font-size: 0.87rem;
-  caret-color: var(--accent);
-}
-#search-input::placeholder { color: var(--muted); }
-
-.chips-scroll {
-  display: flex; gap: 7px; padding: 0 14px 10px;
-  overflow-x: auto; scrollbar-width: none;
-}
-.chips-scroll::-webkit-scrollbar { display: none; }
-
-.cat-chip {
-  flex-shrink: 0; padding: 5px 14px;
-  border-radius: var(--r3); border: 1px solid var(--border2);
-  background: var(--lift); color: var(--sub);
-  font-size: 0.75rem; font-weight: 600; cursor: pointer;
-  white-space: nowrap; transition: all 0.16s;
-}
-.cat-chip.active {
-  color: #fff; border-color: transparent;
-}
-.cat-chip:active { transform: scale(0.92); }
-
-/* ═══════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════════
    PAGE SYSTEM
-═══════════════════════════════════════════════════════════ */
-.page {
-  position: fixed; inset: 0;
-  top: 56px; /* below header */
-  overflow-y: auto; overflow-x: hidden;
-  visibility: hidden; opacity: 0;
-  transform: translateX(40px);
-  transition: transform var(--dur) var(--ease),
-              opacity    var(--dur) var(--ease),
-              visibility 0s linear var(--dur);
-  -webkit-overflow-scrolling: touch;
+════════════════════════════════════════════════════════ */
+.pg{
+  position:fixed;top:52px;left:0;right:0;bottom:0;
+  overflow-y:auto;overflow-x:hidden;
+  visibility:hidden;
+  opacity:0;transform:translateX(44px);
+  transition:transform .26s var(--ease),opacity .26s var(--ease),visibility 0s linear .26s;
+  -webkit-overflow-scrolling:touch;
 }
-.page.active {
-  visibility: visible; opacity: 1; transform: none;
-  transition: transform var(--dur) var(--ease),
-              opacity    var(--dur) var(--ease),
-              visibility 0s;
+.pg.on{
+  visibility:visible;opacity:1;transform:none;
+  transition:transform .26s var(--ease),opacity .26s var(--ease),visibility 0s
 }
-.page.slide-back {
-  transform: translateX(-30px);
+.pg.back{transform:translateX(-24px)}
+
+#pg-home{top:52px}
+
+/* ════════════════════════════════════════════════════════
+   SKELETON
+════════════════════════════════════════════════════════ */
+@keyframes shimmer{
+  0%{background-position:-500px 0}
+  100%{background-position:500px 0}
+}
+.sk{
+  background:linear-gradient(90deg,var(--s1) 25%,var(--s2) 50%,var(--s1) 75%);
+  background-size:500px 100%;
+  animation:shimmer 1.3s infinite linear;
+  border-radius:8px
+}
+.sk-card{margin-bottom:10px;border-radius:var(--rc);overflow:hidden}
+.sk-img{width:100%;aspect-ratio:16/7;border-radius:0}
+.sk-line{height:12px;margin:12px 14px 6px}
+.sk-line.s{width:45%}
+.sk-line.xs{height:9px;width:65%;margin-bottom:14px}
+
+/* ════════════════════════════════════════════════════════
+   BATCH CARDS  (image-first)
+════════════════════════════════════════════════════════ */
+#home-inner{padding-top:106px;padding-bottom:28px}/* topbar ≈54px */
+
+.sec{
+  display:flex;align-items:center;gap:8px;
+  padding:16px 14px 9px;
+  font-size:.64rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.1em;color:var(--t1)
+}
+.sec::after{content:'';flex:1;height:1px;background:var(--bdr)}
+
+.grid{padding:0 11px}
+
+@keyframes floatUp{
+  from{opacity:0;transform:translateY(22px)}
+  to{opacity:1;transform:none}
 }
 
-#page-home { top: 56px; }   /* header only */
-#page-batch, #page-topic { top: 56px; }
+.card{
+  position:relative;border-radius:var(--rc);overflow:hidden;
+  background:var(--s1);border:1px solid var(--bdr);
+  cursor:pointer;margin-bottom:10px;
+  /* category stripe via box-shadow so it doesn't affect layout */
+  box-shadow:inset 0 2.5px 0 var(--cc,#3d3560);
+  animation:floatUp .42s var(--spring) both;
+  transition:transform .14s var(--ease),box-shadow .14s;
+}
+.card:active{transform:scale(.971)}
+.card.fv{border-color:rgba(249,115,22,.35)}
 
-/* ═══════════════════════════════════════════════════════════
-   SKELETON SHIMMER
-═══════════════════════════════════════════════════════════ */
-@keyframes shimmer {
-  0%   { background-position: -600px 0; }
-  100% { background-position:  600px 0; }
+.cimg{
+  position:relative;width:100%;aspect-ratio:16/7;
+  background:var(--s2);overflow:hidden
 }
-.skel {
-  background: linear-gradient(90deg,
-    var(--lift) 25%, var(--lift2) 50%, var(--lift) 75%);
-  background-size: 600px 100%;
-  animation: shimmer 1.4s infinite linear;
-  border-radius: var(--r);
+.cimg img{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;display:block;
+  opacity:0;transition:opacity .38s
 }
-.skel-card {
-  margin-bottom: 12px; overflow: hidden;
-  border-radius: var(--r);
+.cimg img.rdy{opacity:1}
+.cph{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:2.8rem;pointer-events:none
 }
-.skel-img  { width:100%; aspect-ratio:16/7; border-radius:0; }
-.skel-line { height: 14px; margin: 12px 14px 6px; border-radius: 6px; }
-.skel-line.short { width: 55%; }
-.skel-line.thin  { height: 10px; width: 70%; }
+.cov{
+  position:absolute;inset:0;
+  background:linear-gradient(to bottom,
+    rgba(5,4,11,0) 0%,rgba(5,4,11,0) 28%,
+    rgba(5,4,11,.65) 65%,rgba(5,4,11,.92) 100%)
+}
+.live-pip{
+  position:absolute;top:10px;left:10px;z-index:2;
+  background:var(--live);color:#fff;
+  font-size:.6rem;font-weight:900;letter-spacing:.06em;
+  padding:2px 8px;border-radius:4px;
+  animation:lpulse 2s ease-in-out infinite
+}
+@keyframes lpulse{0%,100%{opacity:1}50%{opacity:.7}}
 
-/* ═══════════════════════════════════════════════════════════
-   BATCH CARDS — IMAGE-FIRST OVERLAY STYLE
-═══════════════════════════════════════════════════════════ */
-#home-pad {
-  padding-top: 110px; /* header + filter bar */
-  padding-bottom: 30px;
+.fav{
+  position:absolute;top:8px;right:8px;z-index:3;
+  width:34px;height:34px;border-radius:50%;
+  background:rgba(0,0,0,.52);
+  backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.12);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.95rem;cursor:pointer;
+  transition:transform .16s var(--spring),background .14s
 }
+.fav:active{transform:scale(.76)!important}
+.fav.on{background:rgba(249,115,22,.25);border-color:rgba(249,115,22,.45)}
 
-.section-hdr {
-  display: flex; align-items: center; gap: 8px;
-  padding: 18px 14px 10px;
-  font-size: 0.68rem; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.1em; color: var(--sub);
+@keyframes pop{
+  0%{transform:scale(1)}
+  40%{transform:scale(1.5)}
+  70%{transform:scale(.85)}
+  100%{transform:scale(1)}
 }
-.section-hdr::after {
-  content: ''; flex: 1; height: 1px; background: var(--border);
-}
+.fav.pop{animation:pop .36s var(--spring)}
 
-.batch-grid { padding: 0 12px; }
+.cbody{position:relative;z-index:2;padding:10px 13px 13px}
+.ccat{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:.6rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+  padding:2px 9px;border-radius:var(--rp);margin-bottom:6px;
+  background:rgba(255,255,255,.07);
+  /* color set via inline style */
+}
+.ctitle{
+  font-size:.9rem;font-weight:800;line-height:1.38;margin-bottom:5px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden
+}
+.cmeta{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  font-size:.7rem;color:var(--t1)
+}
+.cmeta span{display:flex;align-items:center;gap:3px}
 
-.batch-card {
-  position: relative; overflow: hidden;
-  border-radius: var(--r);
-  margin-bottom: 12px;
-  cursor: pointer;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  transition: transform 0.14s var(--ease), box-shadow 0.14s;
-  will-change: transform;
+/* ════════════════════════════════════════════════════════
+   BATCH DETAIL HERO
+════════════════════════════════════════════════════════ */
+.dhero{position:relative;overflow:hidden}
+.dhbg{
+  position:absolute;inset:-15px;z-index:0;
+  background-size:cover;background-position:center;
+  filter:blur(22px) brightness(.3) saturate(1.3);
+  transform:scale(1.06)
 }
-.batch-card:active {
-  transform: scale(0.975);
-  box-shadow: 0 0 0 2px var(--accent-hi);
+.dhfg{position:relative;z-index:1;padding:18px 14px 16px}
+.dthumb{
+  width:100%;aspect-ratio:16/6.5;object-fit:cover;
+  border-radius:12px;display:block;margin-bottom:12px;
+  box-shadow:0 12px 40px rgba(0,0,0,.65)
 }
-.batch-card.faved { border-color: rgba(124,99,255,0.4); }
-
-.card-img-wrap {
-  position: relative; width: 100%; aspect-ratio: 16/7;
-  background: var(--lift); overflow: hidden;
+.dthumb-ph{
+  width:100%;aspect-ratio:16/6.5;
+  background:var(--s2);border-radius:12px;
+  display:flex;align-items:center;justify-content:center;font-size:3rem;
+  margin-bottom:12px
 }
-.card-img-wrap img {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%; object-fit: cover;
-  display: block; opacity: 0;
-  transition: opacity 0.4s;
-}
-.card-img-wrap img.loaded { opacity: 1; }
-
-.card-placeholder {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 3rem;
-}
-
-/* gradient overlay bottom half */
-.card-overlay {
-  position: absolute; inset: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(6,9,18,0)   0%,
-    rgba(6,9,18,0)   30%,
-    rgba(6,9,18,0.7) 65%,
-    rgba(6,9,18,0.95) 100%
-  );
-}
-
-.card-live-badge {
-  position: absolute; top: 10px; left: 10px; z-index: 2;
-  background: var(--live); color: #fff;
-  font-size: 0.62rem; font-weight: 900; letter-spacing: 0.06em;
-  padding: 2px 8px; border-radius: 4px;
-  animation: livePulse 2s ease-in-out infinite;
-}
-@keyframes livePulse {
-  0%,100% { opacity: 1; } 50% { opacity: 0.75; }
-}
-
-.fav-btn {
-  position: absolute; top: 8px; right: 8px; z-index: 3;
-  width: 34px; height: 34px; border-radius: 50%;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.1);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1rem; cursor: pointer;
-  transition: transform 0.18s var(--ease), background 0.15s;
-}
-.fav-btn:active { transform: scale(0.78); }
-.fav-btn.on { background: rgba(251,191,36,0.25); border-color: rgba(251,191,36,0.4); }
-
-@keyframes heartPop {
-  0%   { transform: scale(1); }
-  40%  { transform: scale(1.45); }
-  70%  { transform: scale(0.88); }
-  100% { transform: scale(1); }
-}
-.fav-btn.popping { animation: heartPop 0.38s var(--ease); }
-
-.card-meta {
-  position: relative; z-index: 2;
-  padding: 10px 13px 13px;
-}
-.card-cat-chip {
-  display: inline-flex; align-items: center;
-  font-size: 0.62rem; font-weight: 800; letter-spacing: 0.07em;
-  text-transform: uppercase;
-  padding: 2px 9px; border-radius: var(--r3);
-  margin-bottom: 6px;
-}
-.card-title {
-  font-size: 0.92rem; font-weight: 800; line-height: 1.35;
-  color: var(--text); margin-bottom: 6px;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
-.card-foot {
-  display: flex; align-items: center; gap: 12px;
-  font-size: 0.72rem; color: var(--sub); flex-wrap: wrap;
-}
-.card-foot span { display: flex; align-items: center; gap: 3px; }
-
-/* ═══════════════════════════════════════════════════════════
-   BATCH DETAIL — HERO
-═══════════════════════════════════════════════════════════ */
-.detail-hero {
-  position: relative; overflow: hidden;
-}
-.hero-bg {
-  position: absolute; inset: -20px;
-  background-size: cover; background-position: center;
-  filter: blur(24px) brightness(0.35) saturate(1.2);
-  transform: scale(1.05);
-}
-.hero-fg {
-  position: relative; z-index: 2;
-  padding: 20px 16px 18px;
-  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
-}
-.hero-thumb {
-  width: 100%; aspect-ratio: 16/6.5;
-  object-fit: cover; border-radius: 11px;
-  display: block; margin-bottom: 4px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-}
-.hero-thumb-placeholder {
-  width: 100%; aspect-ratio: 16/6.5;
-  background: var(--lift); border-radius: 11px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 3.5rem; margin-bottom: 4px;
-}
-.hero-cat { font-size: 0.64rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
-.hero-title { font-size: 1.1rem; font-weight: 800; line-height: 1.3; }
-.hero-chips { display: flex; gap: 6px; flex-wrap: wrap; }
-.hero-chip {
-  font-size: 0.71rem; color: var(--sub);
-  background: rgba(255,255,255,0.07); border: 1px solid var(--border2);
-  border-radius: var(--r3); padding: 4px 11px;
-  display: flex; align-items: center; gap: 4px;
+.dcat{font-size:.62rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.dtitle{font-size:1.08rem;font-weight:800;line-height:1.28;margin-bottom:10px}
+.dchips{display:flex;gap:6px;flex-wrap:wrap}
+.dchip{
+  font-size:.7rem;color:var(--t1);
+  background:rgba(255,255,255,.07);border:1px solid var(--bdr2);
+  border-radius:var(--rp);padding:4px 12px;
+  display:flex;align-items:center;gap:4px
 }
 
-/* ═══════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════════
    TOPIC CARDS
-═══════════════════════════════════════════════════════════ */
-.topics-wrap { padding: 4px 12px 80px; }
+════════════════════════════════════════════════════════ */
+.twrap{padding:2px 11px 80px}
+.tcard{
+  background:var(--s1);border:1px solid var(--bdr);
+  border-radius:var(--rb);padding:13px 13px;margin-bottom:8px;
+  cursor:pointer;display:flex;align-items:center;gap:12px;
+  border-left:3px solid var(--cc,var(--t2));
+  transition:transform .13s var(--ease),border-color .14s,background .14s
+}
+.tcard:active{transform:scale(.974)}
+.tcard:hover{background:var(--s2)}
+.tico{
+  width:44px;height:44px;border-radius:11px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:1.3rem;
+  background:rgba(255,255,255,.06)
+}
+.ttext{flex:1;min-width:0}
+.tname{font-size:.87rem;font-weight:700;line-height:1.3;margin-bottom:3px}
+.tsub{font-size:.71rem;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tcnt{
+  font-size:.66rem;font-weight:800;
+  padding:3px 10px;border-radius:var(--rp);
+  background:rgba(255,255,255,.06);color:var(--t1);flex-shrink:0
+}
+.tarr{color:var(--t2);margin-left:2px;flex-shrink:0}
 
-.topic-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 13px 14px;
-  margin-bottom: 8px; cursor: pointer;
-  display: flex; align-items: center; gap: 13px;
-  transition: transform 0.13s var(--ease), border-color 0.15s;
+/* ════════════════════════════════════════════════════════
+   LECTURE LIST
+════════════════════════════════════════════════════════ */
+.lvhero{
+  padding:14px;background:var(--s1);
+  border-bottom:1px solid var(--bdr);
+  display:flex;align-items:center;gap:13px
 }
-.topic-card:active { transform: scale(0.975); }
-.topic-card:hover  { border-color: var(--border2); }
-
-.topic-icon-box {
-  width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.35rem;
+.lvico{
+  width:52px;height:52px;border-radius:13px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:1.55rem;
+  background:rgba(255,255,255,.06)
 }
-.topic-text { flex: 1; min-width: 0; }
-.topic-name { font-size: 0.89rem; font-weight: 700; line-height: 1.3; margin-bottom: 3px; }
-.topic-sub  { font-size: 0.73rem; color: var(--sub);
-              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.topic-right { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
-.topic-count {
-  font-size: 0.68rem; font-weight: 700;
-  padding: 3px 10px; border-radius: var(--r3);
-}
-.topic-arrow { color: var(--muted); font-size: 1.1rem; }
-
-/* ═══════════════════════════════════════════════════════════
-   TOPIC HERO (lecture view)
-═══════════════════════════════════════════════════════════ */
-.lview-hero {
-  padding: 16px 14px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 14px;
-}
-.lview-icon {
-  width: 54px; height: 54px; border-radius: 14px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.6rem;
-}
-.lview-info { flex: 1; min-width: 0; }
-.lview-name { font-size: 1rem; font-weight: 800; margin-bottom: 4px; line-height: 1.2; }
-.lview-teacher { font-size: 0.77rem; color: var(--sub); }
-.lview-badge {
-  font-size: 0.7rem; font-weight: 700; color: #fff;
-  background: var(--accent); border-radius: var(--r3);
-  padding: 4px 12px; flex-shrink: 0;
+.lvinfo{flex:1;min-width:0}
+.lvname{font-size:.98rem;font-weight:800;margin-bottom:3px;line-height:1.2}
+.lvtch{font-size:.75rem;color:var(--t1)}
+.lvbadge{
+  font-size:.68rem;font-weight:800;color:#fff;
+  background:var(--a);border-radius:var(--rp);
+  padding:4px 12px;flex-shrink:0
 }
 
-/* ═══════════════════════════════════════════════════════════
-   LECTURE CARDS
-═══════════════════════════════════════════════════════════ */
-.lec-list { padding: 10px 12px 90px; }
+.llist{padding:9px 11px 90px}
+.lcard{
+  background:var(--s1);border:1px solid var(--bdr);
+  border-radius:var(--rb);padding:11px 13px;margin-bottom:8px;
+  display:flex;align-items:center;gap:11px;
+  cursor:pointer;transition:transform .12s,border-color .14s
+}
+.lcard.play:active{transform:scale(.975)}
+.lcard.locked{opacity:.5;cursor:default}
 
-.lec-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 12px 14px;
-  margin-bottom: 8px;
-  display: flex; align-items: center; gap: 12px;
-  cursor: pointer; transition: transform 0.12s, border-color 0.15s;
+.lnum{
+  width:33px;height:33px;border-radius:8px;flex-shrink:0;
+  background:var(--s2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.7rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--t1)
 }
-.lec-card.playable:active { transform: scale(0.978); }
-.lec-card.dark { opacity: 0.55; cursor: default; }
+.lcard.play .lnum{background:var(--a10);color:var(--a)}
 
-.lec-num {
-  width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
-  background: var(--lift);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.72rem; font-weight: 700; color: var(--sub);
+.ltext{flex:1;min-width:0}
+.ltitle{
+  font-size:.84rem;font-weight:600;line-height:1.38;margin-bottom:3px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden
 }
-.lec-card.playable .lec-num { background: var(--accent-lo); color: var(--accent); }
+.lmeta{font-size:.69rem;color:var(--t1)}
+.ltag{
+  display:inline-block;background:rgba(255,60,90,.14);
+  color:var(--live);font-size:.58rem;font-weight:800;
+  border-radius:3px;padding:1px 5px;margin-right:4px;vertical-align:middle
+}
+.pbtn{
+  width:36px;height:36px;border-radius:50%;flex-shrink:0;
+  background:var(--a);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.8rem;
+  box-shadow:0 4px 16px rgba(249,115,22,.4)
+}
 
-.lec-text { flex: 1; min-width: 0; }
-.lec-title {
-  font-size: 0.85rem; font-weight: 600; line-height: 1.38; margin-bottom: 3px;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+/* ════════════════════════════════════════════════════════
+   VIDEO PLAYER
+════════════════════════════════════════════════════════ */
+#player{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(2,1,8,.97);
+  display:flex;flex-direction:column;
+  opacity:0;pointer-events:none;
+  transition:opacity .2s
 }
-.lec-meta { font-size: 0.7rem; color: var(--sub); }
-.live-tag {
-  display: inline-block; background: rgba(255,71,87,0.15);
-  color: var(--live); font-size: 0.6rem; font-weight: 800;
-  border-radius: 4px; padding: 1px 6px; margin-right: 5px; vertical-align: middle;
+#player.on{opacity:1;pointer-events:all}
+.ptop{
+  display:flex;align-items:center;gap:10px;padding:13px 15px;
+  background:#030208;border-bottom:1px solid var(--bdr);flex-shrink:0
 }
-.play-dot {
-  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
-  background: var(--accent); color: #fff;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.82rem;
-  box-shadow: 0 4px 14px rgba(124,99,255,0.4);
+#pcls{
+  background:var(--s2);border:1px solid var(--bdr2);
+  color:var(--t0);border-radius:var(--rb);
+  padding:7px 14px;font-size:.8rem;font-weight:600;
+  cursor:pointer;flex-shrink:0;transition:background .14s
 }
-.lec-card.dark .play-dot { display: none; }
+#pcls:active{background:var(--s3)}
+#ptitle{flex:1;font-size:.84rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pbody{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:14px;overflow-y:auto
+}
+#vwrap{
+  width:100%;max-width:840px;background:#000;
+  border-radius:12px;overflow:hidden;aspect-ratio:16/9;
+  box-shadow:0 24px 72px rgba(0,0,0,.9)
+}
+#vwrap video,#vwrap iframe{width:100%;height:100%;border:0;display:block}
+#pmsg{
+  margin-top:13px;text-align:center;
+  color:var(--t1);font-size:.8rem;line-height:1.65;max-width:360px
+}
+#pmsg a{color:var(--a)}
 
-/* ═══════════════════════════════════════════════════════════
-   PLAYER MODAL
-═══════════════════════════════════════════════════════════ */
-#player {
-  position: fixed; inset: 0; z-index: 200;
-  background: rgba(4,5,12,0.97);
-  display: flex; flex-direction: column;
-  opacity: 0; pointer-events: none;
-  transition: opacity 0.22s;
+/* ════════════════════════════════════════════════════════
+   UTILITIES
+════════════════════════════════════════════════════════ */
+.spin-wrap{display:flex;align-items:center;justify-content:center;padding:60px 20px}
+.spin{
+  width:32px;height:32px;
+  border:2.5px solid var(--bdr2);border-top-color:var(--a);
+  border-radius:50%;animation:rot .7s linear infinite
 }
-#player.open { opacity: 1; pointer-events: all; }
-
-.player-top {
-  display: flex; align-items: center; gap: 10px;
-  padding: 14px 16px;
-  background: #030409;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-#player-close {
-  background: var(--lift); border: 1px solid var(--border2);
-  color: var(--text); border-radius: var(--r2);
-  padding: 7px 14px; font-size: 0.82rem; font-weight: 600;
-  cursor: pointer; flex-shrink: 0;
-  transition: background 0.14s;
-}
-#player-close:active { background: var(--lift2); }
-#player-title {
-  flex: 1; font-size: 0.86rem; font-weight: 600;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.player-body {
-  flex: 1; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; padding: 16px;
-  overflow-y: auto;
-}
-#video-wrap {
-  width: 100%; max-width: 820px;
-  background: #000; border-radius: 12px; overflow: hidden;
-  aspect-ratio: 16/9;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-}
-#video-wrap video, #video-wrap iframe {
-  width: 100%; height: 100%; border: 0; display: block;
-}
-#player-msg {
-  margin-top: 14px; text-align: center;
-  color: var(--sub); font-size: 0.82rem;
-  max-width: 360px; line-height: 1.6;
-}
-#player-msg a { color: var(--accent); }
-
-/* ═══════════════════════════════════════════════════════════
-   EMPTY / LOADING
-═══════════════════════════════════════════════════════════ */
-.spinner-wrap {
-  display: flex; align-items: center; justify-content: center; padding: 64px 20px;
-}
-.spinner {
-  width: 34px; height: 34px;
-  border: 3px solid var(--border2); border-top-color: var(--accent);
-  border-radius: 50%; animation: spin 0.72s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.empty-state {
-  text-align: center; padding: 56px 24px; color: var(--sub); line-height: 1.75;
-}
-.empty-state .ei { font-size: 2.8rem; margin-bottom: 10px; }
-
-/* ═══════════════════════════════════════════════════════════
-   CATEGORY COLOR TOKENS (applied via JS data-cat attribute)
-═══════════════════════════════════════════════════════════ */
-/* Applied inline via JS — keeping definitions here for reference */
+@keyframes rot{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:52px 22px;color:var(--t1);line-height:1.8}
+.empty em{display:block;font-size:2.6rem;margin-bottom:8px;font-style:normal}
+.err{color:var(--live);font-size:.8rem;text-align:center;padding:24px}
 </style>
 </head>
 <body>
 
-<!-- ══ HEADER ══════════════════════════════════════════════ -->
-<div id="header">
-  <button id="back-btn" onclick="navBack()">‹</button>
-  <div id="logo">
-    <div id="logo-name">SelectionWay</div>
-    <div id="logo-sub">By Trms</div>
+<!-- ══ HEADER ══════════════════════════════════════════ -->
+<div id="hdr">
+  <button id="back" onclick="navBack()">‹</button>
+  <div id="brand">
+    <div id="brand-name">SelectionWay</div>
+    <div id="brand-sub">By Trms</div>
   </div>
   <div id="hdr-title"></div>
-  <span id="hdr-count"></span>
+  <span id="hdr-badge"></span>
 </div>
 
-<!-- ══ FILTER BAR (home only) ══════════════════════════════ -->
-<div id="filter-bar">
+<!-- ══ TOPBAR (search + cats) ══════════════════════════ -->
+<div id="topbar">
   <div class="search-row">
-    <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <input id="search-input" type="search" placeholder="Search batches, teachers…"
-           oninput="filterBatches(this.value)" autocomplete="off">
+    <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.4-4.4"/>
+    </svg>
+    <input id="q" type="search" placeholder="Search courses, teachers…"
+           oninput="filter(this.value)" autocomplete="off">
   </div>
-  <div class="chips-scroll" id="cat-chips">
-    <div class="cat-chip active" data-cat="" onclick="selectCat(this,'')">All</div>
-  </div>
-</div>
-
-<!-- ══ PAGE: HOME ═══════════════════════════════════════════ -->
-<div class="page active" id="page-home">
-  <div id="home-pad">
-    <div id="fav-section"></div>
-    <div id="batch-section">
-      <!-- skeleton -->
-      <div id="batch-list">
-        ${skeletonCards(4)}
-      </div>
-    </div>
+  <div class="chips" id="chips">
+    <div class="chip on" data-c="" onclick="selCat(this,'')">All</div>
   </div>
 </div>
 
-<!-- ══ PAGE: BATCH DETAIL ═══════════════════════════════════ -->
-<div class="page" id="page-batch">
-  <div id="batch-hero"></div>
-  <div class="topics-wrap">
-    <div class="section-hdr">Topics &amp; Chapters</div>
-    <div id="topic-cards"></div>
+<!-- ══ HOME ════════════════════════════════════════════ -->
+<div class="pg on" id="pg-home">
+  <div id="home-inner">
+    <div id="fav-sec"></div>
+    <div id="batch-sec"><div id="blist"></div></div>
   </div>
 </div>
 
-<!-- ══ PAGE: LECTURE LIST ═══════════════════════════════════ -->
-<div class="page" id="page-topic">
-  <div id="lview-hero"></div>
-  <div class="lec-list" id="lec-list"></div>
+<!-- ══ BATCH DETAIL ════════════════════════════════════ -->
+<div class="pg" id="pg-batch">
+  <div id="dhero-el"></div>
+  <div class="twrap">
+    <div class="sec" style="padding-left:3px">Topics &amp; Chapters</div>
+    <div id="topic-list"></div>
+  </div>
 </div>
 
-<!-- ══ PLAYER MODAL ════════════════════════════════════════ -->
+<!-- ══ LECTURE LIST ════════════════════════════════════ -->
+<div class="pg" id="pg-topic">
+  <div id="lv-hero"></div>
+  <div class="llist" id="llist"></div>
+</div>
+
+<!-- ══ PLAYER ══════════════════════════════════════════ -->
 <div id="player">
-  <div class="player-top">
-    <button id="player-close" onclick="closePlayer()">✕ Close</button>
-    <span id="player-title"></span>
+  <div class="ptop">
+    <button id="pcls" onclick="closePlayer()">✕ Close</button>
+    <span id="ptitle"></span>
   </div>
-  <div class="player-body">
-    <div id="video-wrap"></div>
-    <div id="player-msg"></div>
+  <div class="pbody">
+    <div id="vwrap"></div>
+    <div id="pmsg"></div>
   </div>
 </div>
 
 <script>
-// ══════════════════════════════════════════════════════════════
-// TELEGRAM INIT
-// ══════════════════════════════════════════════════════════════
-if (window.Telegram && Telegram.WebApp) {
-  Telegram.WebApp.ready();
-  Telegram.WebApp.expand();
-}
+/* ════════════════════════════════════════════════════════
+   TELEGRAM
+════════════════════════════════════════════════════════ */
+if(window.Telegram&&Telegram.WebApp){Telegram.WebApp.ready();Telegram.WebApp.expand()}
 
-// ══════════════════════════════════════════════════════════════
-// CATEGORY COLOR SYSTEM
-// ══════════════════════════════════════════════════════════════
-const CAT_COLORS = [
-  { match: ['ssc','railway','rrb'],         bg:'#f59e0b', text:'#000', icon:'🚂' },
-  { match: ['upsc','civil','ias'],          bg:'#8b5cf6', text:'#fff', icon:'🏛️' },
-  { match: ['math','maths','quantitative'], bg:'#3b82f6', text:'#fff', icon:'📐' },
-  { match: ['english','grammar'],           bg:'#10b981', text:'#fff', icon:'📝' },
-  { match: ['history','ancient','modern'],  bg:'#ef4444', text:'#fff', icon:'🏺' },
-  { match: ['polity','political','constitution'], bg:'#6366f1', text:'#fff', icon:'⚖️' },
-  { match: ['geo','geography'],             bg:'#06b6d4', text:'#fff', icon:'🌍' },
-  { match: ['economy','economic','eco'],    bg:'#22c55e', text:'#000', icon:'📊' },
-  { match: ['science','physics','chemistry','biology'], bg:'#a855f7', text:'#fff', icon:'🔬' },
-  { match: ['reasoning','logic'],           bg:'#f97316', text:'#fff', icon:'🧠' },
-  { match: ['hindi','language'],            bg:'#ec4899', text:'#fff', icon:'📖' },
-  { match: ['general','gk','current'],      bg:'#14b8a6', text:'#fff', icon:'🌐' },
+/* ════════════════════════════════════════════════════════
+   CATEGORY SYSTEM
+════════════════════════════════════════════════════════ */
+const CATS=[
+  {k:['ssc','cgl','chsl','cpo'],       c:'#ff6b2b',i:'🚂'},
+  {k:['railway','rrb','ntpc'],          c:'#ff6b2b',i:'🚂'},
+  {k:['upsc','ias','civil'],            c:'#a855f7',i:'🏛️'},
+  {k:['math','maths','quant'],          c:'#3b82f6',i:'📐'},
+  {k:['english','grammar','vocab'],     c:'#10b981',i:'📝'},
+  {k:['history','ancient','medieval'],  c:'#ef4444',i:'🏺'},
+  {k:['polity','political','constit'],  c:'#6366f1',i:'⚖️'},
+  {k:['geo','geography'],               c:'#06b6d4',i:'🌍'},
+  {k:['economy','economics'],           c:'#22c55e',i:'📊'},
+  {k:['science','physics','chem','bio'],c:'#c026d3',i:'🔬'},
+  {k:['reasoning','logic','aptitude'],  c:'#f59e0b',i:'🧠'},
+  {k:['hindi','language','literature'], c:'#ec4899',i:'📖'},
+  {k:['gk','general','current','gs'],   c:'#14b8a6',i:'🌐'},
+  {k:['selection','batch'],             c:'#f97316',i:'⭐'},
 ];
-const CAT_DEFAULT = { bg:'#4f6272', text:'#fff', icon:'📚' };
+const DEFCAT={c:'#6b7a9d',i:'📚'};
 
-const TOPIC_ICONS = ['📖','📝','🎯','🏛️','🌍','⚖️','💡','🔬','📊','🗺️','⚡','🎓','🧠','📐','🌐','🏺','🚀','🔑'];
+const TICONS=['📖','📝','🎯','🏛️','🌍','⚖️','💡','🔬','📊','🗺️','⚡','🎓','🧠','📐','🌐','🏺','🚀','🔑'];
 
-function catStyle(cat) {
-  const c = (cat||'').toLowerCase();
-  for (const entry of CAT_COLORS) {
-    if (entry.match.some(m => c.includes(m))) return entry;
-  }
-  return CAT_DEFAULT;
+function catOf(str){
+  const s=(str||'').toLowerCase();
+  for(const e of CATS) if(e.k.some(k=>s.includes(k))) return e;
+  return DEFCAT;
 }
 
-// ══════════════════════════════════════════════════════════════
-// STATE
-// ══════════════════════════════════════════════════════════════
-let allBatches = [], filteredBatches = [], activeCat = '';
-let currentBatch = null, currentVideos = [], currentTopic = null;
-let hlsInst = null;
-let stack = ['home'];
-let favorites = JSON.parse(localStorage.getItem('sw_favs') || '[]');
+/* ════════════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════════════ */
+let ALL=[],SHOWN=[],ACT_CAT='',CUR_BATCH=null,CUR_TOPIC=null,VIDS=[];
+let hls=null;
+let STACK=['home'];
+let FAVS=JSON.parse(localStorage.getItem('sw_f')||'[]');
 
-// ══════════════════════════════════════════════════════════════
-// UTILS
-// ══════════════════════════════════════════════════════════════
-function esc(s) {
-  if (s == null) return '';
-  return String(s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
-function isFav(id) { return favorites.includes(String(id)); }
+/* ════════════════════════════════════════════════════════
+   UTILS
+════════════════════════════════════════════════════════ */
+const H=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const isFav=id=>FAVS.includes(String(id));
+const saveFavs=()=>localStorage.setItem('sw_f',JSON.stringify(FAVS));
 
-function toggleFav(id, e) {
-  e && e.stopPropagation();
-  id = String(id);
-  const btn = e && e.currentTarget;
-  if (btn) { btn.classList.add('popping'); setTimeout(() => btn.classList.remove('popping'), 400); }
-  favorites = isFav(id) ? favorites.filter(f => f !== id) : [...favorites, id];
-  localStorage.setItem('sw_favs', JSON.stringify(favorites));
-  renderBatches(filteredBatches);
+function toggleFav(id,e){
+  e&&e.stopPropagation();
+  const btn=e&&e.currentTarget;
+  if(btn){btn.classList.add('pop');setTimeout(()=>btn.classList.remove('pop'),400)}
+  id=String(id);
+  FAVS=isFav(id)?FAVS.filter(f=>f!==id):[...FAVS,id];
+  saveFavs();
+  renderBatches(SHOWN);
 }
 
-// ══════════════════════════════════════════════════════════════
-// SKELETON HTML
-// ══════════════════════════════════════════════════════════════
-function skeletonCards(n) {
-  return Array.from({length:n}, () => `
-    <div class="skel-card">
-      <div class="skel skel-img"></div>
-      <div class="skel skel-line" style="width:45%"></div>
-      <div class="skel skel-line short"></div>
-      <div class="skel skel-line thin" style="margin-bottom:14px"></div>
-    </div>`).join('');
+function skels(n){
+  return Array.from({length:n},()=>`
+  <div class="sk-card">
+    <div class="sk sk-img"></div>
+    <div class="sk sk-line" style="width:38%"></div>
+    <div class="sk sk-line s"></div>
+    <div class="sk sk-line xs"></div>
+  </div>`).join('');
 }
 
-// ══════════════════════════════════════════════════════════════
-// NAVIGATION
-// ══════════════════════════════════════════════════════════════
-function navTo(pageName) {
-  const cur = document.getElementById('page-' + stack[stack.length-1]);
-  const next = document.getElementById('page-' + pageName);
-  if (!next || next === cur) return;
-
-  stack.push(pageName);
-  if (cur) cur.classList.remove('active');
-  next.classList.remove('slide-back');
-  next.classList.add('active');
-  next.scrollTop = 0;
-  syncHeader();
+/* ════════════════════════════════════════════════════════
+   NAVIGATION
+════════════════════════════════════════════════════════ */
+function navTo(name){
+  const cur=document.getElementById('pg-'+STACK[STACK.length-1]);
+  const nxt=document.getElementById('pg-'+name);
+  if(!nxt||nxt===cur)return;
+  STACK.push(name);
+  if(cur)cur.classList.remove('on');
+  nxt.classList.remove('back');
+  nxt.classList.add('on');
+  nxt.scrollTop=0;
+  syncHdr();
+}
+function navBack(){
+  if(STACK.length<=1)return;
+  const cur=document.getElementById('pg-'+STACK.pop());
+  const prv=document.getElementById('pg-'+STACK[STACK.length-1]);
+  if(cur){cur.classList.add('back');cur.classList.remove('on')}
+  if(prv)prv.classList.add('on');
+  syncHdr();
+}
+function syncHdr(){
+  const cur=STACK[STACK.length-1];
+  const home=cur==='home';
+  document.getElementById('back').classList.toggle('show',!home);
+  document.getElementById('brand').style.display=home?'':'none';
+  const ht=document.getElementById('hdr-title');
+  const hb=document.getElementById('hdr-badge');
+  ht.style.display=home?'none':'';
+  document.getElementById('topbar').classList.toggle('off',!home);
+  if(cur==='batch'&&CUR_BATCH){
+    ht.textContent=(CUR_BATCH.batch_meta||{}).title||'…';
+    hb.style.display='none';
+  }else if(cur==='topic'&&CUR_TOPIC){
+    ht.textContent=CUR_TOPIC.name||'…';
+    const n=(CUR_TOPIC.classes||[]).length;
+    hb.textContent=n+' classes';hb.style.display=n?'':'none';
+  }else{hb.style.display='none'}
 }
 
-function navBack() {
-  if (stack.length <= 1) return;
-  const cur = document.getElementById('page-' + stack.pop());
-  const prev = document.getElementById('page-' + stack[stack.length-1]);
-
-  if (cur) {
-    cur.classList.add('slide-back');
-    cur.classList.remove('active');
-  }
-  if (prev) { prev.classList.add('active'); }
-  syncHeader();
-}
-
-function syncHeader() {
-  const cur = stack[stack.length - 1];
-  const onHome = cur === 'home';
-
-  document.getElementById('back-btn').classList.toggle('show', !onHome);
-  document.getElementById('logo').style.display   = onHome ? '' : 'none';
-  document.getElementById('hdr-title').style.display = onHome ? 'none' : '';
-  document.getElementById('filter-bar').classList.toggle('hidden', !onHome);
-
-  const title = document.getElementById('hdr-title');
-  const cnt   = document.getElementById('hdr-count');
-
-  if (cur === 'batch' && currentBatch) {
-    title.textContent = (currentBatch.batch_meta || {}).title || '…';
-    cnt.style.display = 'none';
-  } else if (cur === 'topic' && currentTopic) {
-    title.textContent = currentTopic.name || '…';
-    const n = (currentTopic.classes || []).length;
-    cnt.textContent = n + ' classes';
-    cnt.style.display = n ? '' : 'none';
-  } else {
-    cnt.style.display = 'none';
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-// CATEGORY CHIPS
-// ══════════════════════════════════════════════════════════════
-function buildCatChips(batches) {
-  const seen = new Set();
-  const cats = [];
-  batches.forEach(b => {
-    const c = (b.category || '').trim();
-    if (c && !seen.has(c)) { seen.add(c); cats.push(c); }
-  });
-  const bar = document.getElementById('cat-chips');
-  const existing = bar.querySelectorAll('.cat-chip:not([data-cat=""])');
-  existing.forEach(e => e.remove());
-  cats.slice(0,12).forEach(cat => {
-    const st = catStyle(cat);
-    const chip = document.createElement('div');
-    chip.className = 'cat-chip';
-    chip.dataset.cat = cat;
-    chip.textContent = st.icon + ' ' + cat;
-    chip.onclick = () => selectCat(chip, cat);
-    bar.appendChild(chip);
+/* ════════════════════════════════════════════════════════
+   CAT CHIPS
+════════════════════════════════════════════════════════ */
+function buildChips(batches){
+  const seen=new Set(),cats=[];
+  batches.forEach(b=>{const c=(b.category||'').trim();if(c&&!seen.has(c)){seen.add(c);cats.push(c)}});
+  const bar=document.getElementById('chips');
+  bar.querySelectorAll('.chip:not([data-c=""])').forEach(e=>e.remove());
+  cats.slice(0,14).forEach(cat=>{
+    const st=catOf(cat);
+    const el=document.createElement('div');
+    el.className='chip';el.dataset.c=cat;
+    el.innerHTML=st.i+' '+H(cat);
+    el.onclick=()=>selCat(el,cat);
+    bar.appendChild(el);
   });
 }
-
-function selectCat(el, cat) {
-  document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  const st = catStyle(cat);
-  el.style.background = cat ? st.bg : 'var(--lift)';
-  el.style.color = cat ? st.text : '';
-  // reset others
-  document.querySelectorAll('.cat-chip:not(.active)').forEach(c => {
-    c.style.background = ''; c.style.color = '';
+function selCat(el,cat){
+  document.querySelectorAll('.chip').forEach(c=>{
+    c.classList.remove('on');c.style.background='';c.style.color='';
   });
-  activeCat = cat;
-  const q = document.getElementById('search-input').value.trim().toLowerCase();
-  applyFilters(q, cat);
+  const st=catOf(cat);
+  el.classList.add('on');
+  if(cat){el.style.background=st.c;el.style.color=cat?'#fff':'';}
+  ACT_CAT=cat;
+  const q=document.getElementById('q').value.trim().toLowerCase();
+  applyFilters(q,cat);
 }
 
-// ══════════════════════════════════════════════════════════════
-// LOAD BATCHES
-// ══════════════════════════════════════════════════════════════
-async function loadBatches() {
-  document.getElementById('batch-list').innerHTML = skeletonCards(5);
-  try {
-    const res = await fetch('/bot-api/batches');
-    if (!res.ok) throw new Error('Server error ' + res.status);
-    allBatches = await res.json();
-    filteredBatches = allBatches;
-    buildCatChips(allBatches);
-    renderBatches(allBatches);
-    const m = location.hash.match(/batch=([a-zA-Z0-9_\-]{6,})/);
-    if (m) openBatch(m[1], '');
-  } catch(err) {
-    document.getElementById('batch-list').innerHTML =
-      `<div class="empty-state"><div class="ei">⚠️</div>${err.message}</div>`;
+/* ════════════════════════════════════════════════════════
+   LOAD
+════════════════════════════════════════════════════════ */
+async function loadBatches(){
+  document.getElementById('blist').innerHTML=skels(5);
+  try{
+    const r=await fetch('/bot-api/batches');
+    if(!r.ok)throw new Error('Server error '+r.status);
+    ALL=await r.json();
+    SHOWN=ALL;
+    buildChips(ALL);
+    renderBatches(ALL);
+  }catch(err){
+    document.getElementById('blist').innerHTML=
+      `<div class="err">⚠️ ${H(err.message)}</div>`;
   }
 }
-
-function filterBatches(q) {
-  applyFilters(q.trim().toLowerCase(), activeCat);
-}
-
-function applyFilters(q, cat) {
-  filteredBatches = allBatches.filter(b => {
-    const matchCat = !cat || (b.category||'').trim() === cat;
-    const matchQ   = !q   ||
-      (b.title||'').toLowerCase().includes(q) ||
-      (b.faculty||'').toLowerCase().includes(q) ||
+function filter(q){applyFilters(q.trim().toLowerCase(),ACT_CAT)}
+function applyFilters(q,cat){
+  SHOWN=ALL.filter(b=>{
+    const mc=!cat||(b.category||'').trim()===cat;
+    const mq=!q||
+      (b.title||'').toLowerCase().includes(q)||
+      (b.faculty||'').toLowerCase().includes(q)||
       (b.category||'').toLowerCase().includes(q);
-    return matchCat && matchQ;
+    return mc&&mq;
   });
-  renderBatches(filteredBatches);
+  renderBatches(SHOWN);
 }
 
-// ══════════════════════════════════════════════════════════════
-// RENDER BATCHES
-// ══════════════════════════════════════════════════════════════
-function renderBatches(batches) {
-  const favs = batches.filter(b => isFav(b.id));
-  const rest = batches.filter(b => !isFav(b.id));
+/* ════════════════════════════════════════════════════════
+   RENDER BATCHES
+════════════════════════════════════════════════════════ */
+function renderBatches(batches){
+  const favs=batches.filter(b=>isFav(b.id));
+  const rest=batches.filter(b=>!isFav(b.id));
 
-  document.getElementById('fav-section').innerHTML = favs.length
-    ? `<div class="section-hdr">⭐ Favourites</div>
-       <div class="batch-grid">${favs.map(batchCard).join('')}</div>`
-    : '';
+  document.getElementById('fav-sec').innerHTML=favs.length
+    ?`<div class="sec">⭐ Favourites</div><div class="grid">${favs.map((b,i)=>cardHtml(b,i)).join('')}</div>`
+    :'';
 
-  if (!rest.length && !favs.length) {
-    document.getElementById('batch-list').innerHTML =
-      '<div class="empty-state"><div class="ei">🔍</div>No batches found.</div>';
-    return;
-  }
+  const label=favs.length?'<div class="sec">All Batches</div>':'';
+  document.getElementById('blist').innerHTML=rest.length
+    ?label+`<div class="grid">${rest.map((b,i)=>cardHtml(b,i+favs.length)).join('')}</div>`
+    :(batches.length===0?'<div class="empty"><em>🔍</em>No batches match.</div>':'');
 
-  const label = favs.length ? '<div class="section-hdr">All Batches</div>' : '';
-  document.getElementById('batch-list').innerHTML = rest.length
-    ? label + '<div class="batch-grid">' + rest.map(batchCard).join('') + '</div>'
-    : '';
-
-  // lazy-load images
-  document.querySelectorAll('.card-img-wrap img[data-src]').forEach(img => {
-    lazyImg(img);
-  });
+  // Load images
+  document.querySelectorAll('img[data-s]').forEach(loadImg);
 }
 
-function lazyImg(img) {
-  if (!img.dataset.src) return;
-  const src = img.dataset.src;
-  img.onload  = () => img.classList.add('loaded');
-  img.onerror = () => img.style.display = 'none';
-  img.src = src;
-  delete img.dataset.src;
+function loadImg(img){
+  const src=img.dataset.s;if(!src)return;
+  img.onload=()=>img.classList.add('rdy');
+  img.onerror=()=>img.style.display='none';
+  img.src=src;img.removeAttribute('data-s');
 }
 
-function batchCard(b) {
-  const faved = isFav(b.id);
-  const st    = catStyle(b.category);
-  const idStr = esc(b.id);
-
-  const imgHtml = b.thumb
-    ? `<img data-src="${esc(b.thumb)}" alt="">`
-    : '';
-  const ph = `<div class="card-placeholder">${st.icon}</div>`;
-  const liveBadge = b.liveNow ? '<div class="card-live-badge">🔴 LIVE</div>' : '';
-
-  const meta = [
-    b.faculty    ? `<span>👨‍🏫 ${esc(b.faculty)}</span>`            : '',
-    b.totalClass ? `<span>🎥 ${b.totalClass} classes</span>`       : '',
-    b.price      ? `<span>💰 ₹${esc(String(b.price))}</span>`      : '',
-  ].filter(Boolean).join('');
-
+function cardHtml(b,idx){
+  const st=catOf(b.category);
+  const fv=isFav(b.id);
+  const delay=Math.min(idx*50,320);
   return `
-  <div class="batch-card${faved ? ' faved' : ''}"
-       onclick="openBatch('${idStr}','${esc(b.title).replace(/'/g,"\\'")}')">
-    <div class="card-img-wrap">
-      ${imgHtml}${ph}
-      <div class="card-overlay"></div>
-      ${liveBadge}
-      <button class="fav-btn${faved ? ' on' : ''}"
-              onclick="toggleFav('${idStr}',event)">
-        ${faved ? '⭐' : '🤍'}
-      </button>
+  <div class="card${fv?' fv':''}" style="--cc:${st.c};animation-delay:${delay}ms"
+       onclick="openBatch('${H(b.id)}')">
+    <div class="cimg">
+      ${b.thumb?`<img data-s="${H(b.thumb)}" alt="" loading="lazy">`:''}
+      <div class="cph">${st.i}</div>
+      <div class="cov"></div>
+      ${b.liveNow?'<div class="live-pip">🔴 LIVE</div>':''}
+      <button class="fav${fv?' on':''}"
+              onclick="toggleFav('${H(b.id)}',event)">${fv?'⭐':'🤍'}</button>
     </div>
-    <div class="card-meta">
-      <div class="card-cat-chip"
-           style="background:${st.bg};color:${st.text}">
-        ${st.icon} ${esc(b.category)}
+    <div class="cbody">
+      <div class="ccat" style="color:${st.c}">${st.i} ${H(b.category)}</div>
+      <div class="ctitle">${H(b.title)}</div>
+      <div class="cmeta">
+        ${b.faculty?`<span>👨‍🏫 ${H(b.faculty)}</span>`:''}
+        ${b.totalClass?`<span>🎥 ${b.totalClass}</span>`:''}
+        ${b.price?`<span>💰 ₹${H(String(b.price))}</span>`:''}
       </div>
-      <div class="card-title">${esc(b.title)}</div>
-      ${meta ? `<div class="card-foot">${meta}</div>` : ''}
     </div>
   </div>`;
 }
 
-// ══════════════════════════════════════════════════════════════
-// OPEN BATCH
-// ══════════════════════════════════════════════════════════════
-async function openBatch(batchId, title) {
-  currentBatch = null; currentVideos = [];
-  document.getElementById('batch-hero').innerHTML =
-    '<div class="spinner-wrap"><div class="spinner"></div></div>';
-  document.getElementById('topic-cards').innerHTML = '';
+/* ════════════════════════════════════════════════════════
+   OPEN BATCH
+════════════════════════════════════════════════════════ */
+async function openBatch(id){
+  CUR_BATCH=null;VIDS=[];
+  document.getElementById('dhero-el').innerHTML=
+    '<div class="spin-wrap"><div class="spin"></div></div>';
+  document.getElementById('topic-list').innerHTML='';
   navTo('batch');
-
-  try {
-    const res = await fetch(`/bot-api/batch/${encodeURIComponent(batchId)}/classes`);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    currentBatch  = await res.json();
-    currentVideos = currentBatch.video_links || [];
-    renderBatchDetail(currentBatch);
-  } catch(err) {
-    document.getElementById('batch-hero').innerHTML =
-      `<div class="empty-state"><div class="ei">⚠️</div>${err.message}</div>`;
+  try{
+    const r=await fetch(`/bot-api/batch/${encodeURIComponent(id)}/classes`);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    CUR_BATCH=await r.json();
+    VIDS=CUR_BATCH.video_links||[];
+    renderBatch(CUR_BATCH);
+  }catch(err){
+    document.getElementById('dhero-el').innerHTML=
+      `<div class="err">⚠️ ${H(err.message)}</div>`;
   }
 }
 
-function renderBatchDetail(data) {
-  const meta = data.batch_meta || {};
-  const st   = catStyle(meta.category);
+function renderBatch(data){
+  const meta=data.batch_meta||{};
+  const st=catOf(meta.category);
 
   // Hero
-  const heroEl = document.getElementById('batch-hero');
-  heroEl.innerHTML = `
-    <div class="detail-hero">
-      <div class="hero-bg" ${meta.thumb ? `style="background-image:url('${esc(meta.thumb)}')"` : ''}></div>
-      <div class="hero-fg">
-        ${meta.thumb
-          ? `<img class="hero-thumb" src="${esc(meta.thumb)}" alt=""
-                  onerror="this.outerHTML='<div class=hero-thumb-placeholder>${st.icon}</div>'">`
-          : `<div class="hero-thumb-placeholder">${st.icon}</div>`}
-        <div class="hero-cat" style="color:${st.bg}">${esc(meta.category)}</div>
-        <div class="hero-title">${esc(meta.title)}</div>
-        <div class="hero-chips">
-          ${meta.faculty   ? `<span class="hero-chip">👨‍🏫 ${esc(meta.faculty)}</span>`   : ''}
-          ${meta.price     ? `<span class="hero-chip">💰 ₹${esc(String(meta.price))}</span>` : ''}
-          ${meta.validity  ? `<span class="hero-chip">📅 ${esc(String(meta.validity))}</span>` : ''}
-        </div>
+  const bg=meta.thumb?`style="background-image:url('${H(meta.thumb)}')"` :'';
+  document.getElementById('dhero-el').innerHTML=`
+  <div class="dhero">
+    <div class="dhbg" ${bg}></div>
+    <div class="dhfg">
+      ${meta.thumb
+        ?`<img class="dthumb" src="${H(meta.thumb)}" alt=""
+              onerror="this.outerHTML='<div class=dthumb-ph>${st.i}</div>'">`
+        :`<div class="dthumb-ph">${st.i}</div>`}
+      <div class="dcat" style="color:${st.c}">${st.i} ${H(meta.category)}</div>
+      <div class="dtitle">${H(meta.title)}</div>
+      <div class="dchips">
+        ${meta.faculty  ?`<span class="dchip">👨‍🏫 ${H(meta.faculty)}</span>`:''}
+        ${meta.price    ?`<span class="dchip">💰 ₹${H(String(meta.price))}</span>`:''}
+        ${meta.validity ?`<span class="dchip">📅 ${H(String(meta.validity))}</span>`:''}
       </div>
-    </div>`;
+    </div>
+  </div>`;
 
   // Topics
-  const topics = data.topics || [];
-  if (!topics.length) {
-    document.getElementById('topic-cards').innerHTML =
-      '<div class="empty-state"><div class="ei">📭</div>No classes yet.</div>';
-    syncHeader(); return;
+  const topics=data.topics||[];
+  if(!topics.length){
+    document.getElementById('topic-list').innerHTML=
+      '<div class="empty"><em>📭</em>No classes yet.</div>';
+    syncHdr();return;
   }
-
-  document.getElementById('topic-cards').innerHTML = topics.map((t, i) => {
-    const icon = TOPIC_ICONS[i % TOPIC_ICONS.length];
-    const cnt  = (t.classes || []).length;
-    const sub  = [t.teacher, cnt + (cnt===1?' class':' classes')].filter(Boolean).join(' · ');
+  document.getElementById('topic-list').innerHTML=topics.map((t,i)=>{
+    const ico=TICONS[i%TICONS.length];
+    const cnt=(t.classes||[]).length;
+    const sub=[t.teacher,cnt+(cnt===1?' class':' classes')].filter(Boolean).join(' · ');
     return `
-    <div class="topic-card" onclick="openTopic(${i})">
-      <div class="topic-icon-box"
-           style="background:${st.bg}22;color:${st.bg}">${icon}</div>
-      <div class="topic-text">
-        <div class="topic-name">${esc(t.name)}</div>
-        <div class="topic-sub">${esc(sub)}</div>
+    <div class="tcard" style="--cc:${st.c};animation:floatUp .38s var(--spring) ${Math.min(i*45,300)}ms both"
+         onclick="openTopic(${i})">
+      <div class="tico">${ico}</div>
+      <div class="ttext">
+        <div class="tname">${H(t.name)}</div>
+        <div class="tsub">${H(sub)}</div>
       </div>
-      <div class="topic-right">
-        <span class="topic-count"
-              style="background:${st.bg}22;color:${st.bg}">${cnt}</span>
-        <span class="topic-arrow">›</span>
-      </div>
+      <div class="tcnt">${cnt}</div>
+      <div class="tarr">›</div>
     </div>`;
   }).join('');
-
-  syncHeader();
+  syncHdr();
 }
 
-// ══════════════════════════════════════════════════════════════
-// OPEN TOPIC
-// ══════════════════════════════════════════════════════════════
-function openTopic(idx) {
-  currentTopic = (currentBatch && currentBatch.topics || [])[idx];
-  if (!currentTopic) return;
+/* ════════════════════════════════════════════════════════
+   OPEN TOPIC
+════════════════════════════════════════════════════════ */
+function openTopic(idx){
+  CUR_TOPIC=(CUR_BATCH&&CUR_BATCH.topics||[])[idx];
+  if(!CUR_TOPIC)return;
+  const meta=CUR_BATCH.batch_meta||{};
+  const st=catOf(meta.category);
+  const ico=TICONS[idx%TICONS.length];
+  const cnt=(CUR_TOPIC.classes||[]).length;
 
-  const meta = currentBatch.batch_meta || {};
-  const st   = catStyle(meta.category);
-  const cnt  = (currentTopic.classes || []).length;
-  const icon = TOPIC_ICONS[idx % TOPIC_ICONS.length];
+  document.getElementById('lv-hero').innerHTML=`
+  <div class="lvhero">
+    <div class="lvico" style="background:${st.c}1a;color:${st.c}">${ico}</div>
+    <div class="lvinfo">
+      <div class="lvname">${H(CUR_TOPIC.name)}</div>
+      ${CUR_TOPIC.teacher?`<div class="lvtch">👨‍🏫 ${H(CUR_TOPIC.teacher)}</div>`:''}
+    </div>
+    <div class="lvbadge">${cnt} ${cnt===1?'class':'classes'}</div>
+  </div>`;
 
-  document.getElementById('lview-hero').innerHTML = `
-    <div class="lview-hero">
-      <div class="lview-icon"
-           style="background:${st.bg}22;color:${st.bg}">${icon}</div>
-      <div class="lview-info">
-        <div class="lview-name">${esc(currentTopic.name)}</div>
-        ${currentTopic.teacher
-          ? `<div class="lview-teacher">👨‍🏫 ${esc(currentTopic.teacher)}</div>` : ''}
-      </div>
-      <div class="lview-badge">${cnt} ${cnt===1?'class':'classes'}</div>
-    </div>`;
-
-  const classes = currentTopic.classes || [];
-  document.getElementById('lec-list').innerHTML = classes.length
-    ? classes.map((cls, i) => {
-        const vid     = currentVideos[cls.video_index];
-        const play    = !!(vid && vid.playable);
-        const meta2   = [cls.duration_text, cls.date_text].filter(Boolean).join(' · ');
-        const liveTg  = cls.live ? '<span class="live-tag">🔴 LIVE</span>' : '';
-        return `
-        <div class="lec-card ${play ? 'playable' : 'dark'}"
-             ${play ? `onclick="playVideo(${cls.video_index})"` : ''}>
-          <div class="lec-num">${i+1}</div>
-          <div class="lec-text">
-            <div class="lec-title">${liveTg}${esc(cls.title)}</div>
-            ${meta2 ? `<div class="lec-meta">${esc(meta2)}</div>` : ''}
-          </div>
-          ${play ? '<div class="play-dot">▶</div>' : ''}
-        </div>`;
-      }).join('')
-    : '<div class="empty-state"><div class="ei">📭</div>No lectures yet.</div>';
+  const cls=CUR_TOPIC.classes||[];
+  document.getElementById('llist').innerHTML=cls.length
+    ?cls.map((c,i)=>{
+      const vid=VIDS[c.video_index];
+      const play=!!(vid&&vid.playable);
+      const m=[c.duration_text,c.date_text].filter(Boolean).join(' · ');
+      const lt=c.live?'<span class="ltag">LIVE</span>':'';
+      return `
+      <div class="lcard ${play?'play':'locked'}"
+           ${play?`onclick="playVideo(${c.video_index})"`:''}>
+        <div class="lnum">${String(i+1).padStart(2,'0')}</div>
+        <div class="ltext">
+          <div class="ltitle">${lt}${H(c.title)}</div>
+          ${m?`<div class="lmeta">${H(m)}</div>`:''}
+        </div>
+        ${play?'<div class="pbtn">▶</div>':''}
+      </div>`;
+    }).join('')
+    :'<div class="empty"><em>📭</em>No lectures yet.</div>';
 
   navTo('topic');
 }
 
-// ══════════════════════════════════════════════════════════════
-// VIDEO PLAYER
-// ══════════════════════════════════════════════════════════════
-function playVideo(idx) {
-  const vid = currentVideos[idx];
-  if (!vid || !vid.playable) return;
-  if (hlsInst) { hlsInst.destroy(); hlsInst = null; }
+/* ════════════════════════════════════════════════════════
+   PLAYER
+════════════════════════════════════════════════════════ */
+function playVideo(idx){
+  const vid=VIDS[idx];
+  if(!vid||!vid.playable)return;
+  if(hls){hls.destroy();hls=null}
+  document.getElementById('ptitle').textContent=vid.title||'';
+  document.getElementById('pmsg').innerHTML='';
+  document.getElementById('vwrap').innerHTML='';
+  document.getElementById('player').classList.add('on');
 
-  document.getElementById('player-title').textContent = vid.title;
-  document.getElementById('player-msg').innerHTML = '';
-  document.getElementById('video-wrap').innerHTML = '';
-  document.getElementById('player').classList.add('open');
-
-  if      (vid.video_type === 'mp4')     playMp4(vid);
-  else if (vid.video_type === 'youtube') playYT(vid);
-  else if (vid.video_type === 'hls')     playHLS(vid);
+  if(vid.video_type==='mp4')     _mp4(vid);
+  else if(vid.video_type==='youtube') _yt(vid);
+  else if(vid.video_type==='hls') _hls(vid);
 }
-
-function playMp4(vid) {
-  const urls = vid.mp4_urls || [];
-  if (!urls.length) { playerMsg('❌ No video URL available.', []); return; }
-
-  const el = document.createElement('video');
-  el.controls = true; el.playsInline = true;
-  el.style.cssText = 'width:100%;height:100%;background:#000';
-  document.getElementById('video-wrap').appendChild(el);
-
-  let qi = 0, proxied = false;
-  function tryLoad(url) { el.src = url; el.load(); el.play().catch(() => {}); }
-  el.addEventListener('error', function next() {
+function _mp4(vid){
+  const urls=vid.mp4_urls||[];
+  if(!urls.length){_pmsg('❌ No video URL found.',[]); return}
+  const el=document.createElement('video');
+  el.controls=true;el.playsInline=true;
+  el.style.cssText='width:100%;height:100%;background:#000';
+  document.getElementById('vwrap').appendChild(el);
+  let qi=0,proxied=false;
+  function try_(url){el.src=url;el.load();el.play().catch(()=>{})}
+  el.addEventListener('error',function(){
     qi++;
-    if (qi < urls.length) {
-      tryLoad(urls[qi]);
-    } else if (!proxied) {
-      proxied = true; qi = 0;
-      tryLoad('/proxy-video?url=' + encodeURIComponent(urls[0]));
-    } else {
-      document.getElementById('video-wrap').innerHTML = '';
-      playerMsg('❌ Could not load video. Try opening directly:', urls);
-    }
+    if(qi<urls.length){try_(urls[qi])}
+    else if(!proxied){proxied=true;qi=0;try_('/proxy-video?url='+encodeURIComponent(urls[0]))}
+    else{document.getElementById('vwrap').innerHTML='';_pmsg('❌ Cannot load video. Try opening directly:',urls)}
   });
-  tryLoad(urls[0]);
+  try_(urls[0]);
 }
-
-function playYT(vid) {
-  const m = (vid.url||'').match(
-    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
-  if (!m) { playerMsg('❌ Bad YouTube URL.', []); return; }
-  const f = document.createElement('iframe');
-  f.src = `https://www.youtube.com/embed/${m[1]}?autoplay=1`;
-  f.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen';
-  f.allowFullscreen = true;
-  f.style.cssText = 'width:100%;height:100%;border:0';
-  document.getElementById('video-wrap').appendChild(f);
+function _yt(vid){
+  const m=(vid.url||'').match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+  if(!m){_pmsg('❌ Bad YouTube URL.',[]);return}
+  const f=document.createElement('iframe');
+  f.src=`https://www.youtube.com/embed/${m[1]}?autoplay=1`;
+  f.allow='accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture;fullscreen';
+  f.allowFullscreen=true;f.style.cssText='width:100%;height:100%;border:0';
+  document.getElementById('vwrap').appendChild(f);
 }
-
-function playHLS(vid) {
-  const v = document.createElement('video');
-  v.controls = true; v.playsInline = true;
-  v.style.cssText = 'width:100%;height:100%;background:#000';
-  document.getElementById('video-wrap').appendChild(v);
-  const url = vid.url;
-  if (v.canPlayType('application/vnd.apple.mpegurl')) {
-    v.src = url; v.play().catch(() => {});
-  } else if (window.Hls && Hls.isSupported()) {
-    hlsInst = new Hls({ debug: false });
-    hlsInst.loadSource(url); hlsInst.attachMedia(v);
-    hlsInst.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
-    hlsInst.on(Hls.Events.ERROR, (_, d) => {
-      if (d.fatal) {
-        document.getElementById('video-wrap').innerHTML = '';
-        playerMsg('❌ Stream failed.', vid.raw_url ? [vid.raw_url] : []);
-      }
+function _hls(vid){
+  const v=document.createElement('video');
+  v.controls=true;v.playsInline=true;
+  v.style.cssText='width:100%;height:100%;background:#000';
+  document.getElementById('vwrap').appendChild(v);
+  const url=vid.url;
+  if(v.canPlayType('application/vnd.apple.mpegurl')){
+    v.src=url;v.play().catch(()=>{});
+  }else if(window.Hls&&Hls.isSupported()){
+    hls=new Hls({debug:false});
+    hls.loadSource(url);hls.attachMedia(v);
+    hls.on(Hls.Events.MANIFEST_PARSED,()=>v.play().catch(()=>{}));
+    hls.on(Hls.Events.ERROR,(_,d)=>{
+      if(d.fatal){document.getElementById('vwrap').innerHTML='';_pmsg('❌ Stream failed.',[])}
     });
-  } else {
-    document.getElementById('video-wrap').innerHTML = '';
-    playerMsg('❌ Your browser cannot play this stream. Try Safari.', []);
-  }
+  }else{document.getElementById('vwrap').innerHTML='';_pmsg('❌ Browser cannot play this stream. Try Safari.',[]);}
 }
-
-function playerMsg(msg, urls) {
-  document.getElementById('player-msg').innerHTML = msg +
-    (urls && urls.length
-      ? '<br><br>' + urls.map(u => `<a href="${esc(u)}" target="_blank">↗ Open directly</a>`).join(' &ensp; ')
-      : '');
+function _pmsg(msg,urls){
+  document.getElementById('pmsg').innerHTML=msg+
+    (urls&&urls.length?'<br><br>'+urls.map(u=>`<a href="${H(u)}" target="_blank">↗ Open directly</a>`).join(' &ensp; '):'');
 }
-
-function closePlayer() {
-  document.getElementById('player').classList.remove('open');
-  document.getElementById('video-wrap').innerHTML = '';
-  if (hlsInst) { hlsInst.destroy(); hlsInst = null; }
+function closePlayer(){
+  document.getElementById('player').classList.remove('on');
+  document.getElementById('vwrap').innerHTML='';
+  if(hls){hls.destroy();hls=null}
 }
-document.getElementById('player').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closePlayer();
+document.getElementById('player').addEventListener('click',e=>{
+  if(e.target===e.currentTarget)closePlayer();
 });
 
-// ══════════════════════════════════════════════════════════════
-// BOOT
-// ══════════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════════
+   BOOT
+════════════════════════════════════════════════════════ */
 loadBatches();
 </script>
 </body>
