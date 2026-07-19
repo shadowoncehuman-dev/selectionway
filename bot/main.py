@@ -590,6 +590,21 @@ def proxy_video():
 def index():
     return render_template("miniapp.html")
 
+@app.route("/bot-api/check-user")
+def api_check_user():
+    """Mini App calls this on load to know if the current user is banned."""
+    try:
+        user_id = int(request.args.get("user_id", 0))
+    except (ValueError, TypeError):
+        return jsonify({"banned": False})
+    if not user_id:
+        return jsonify({"banned": False})
+    user = db_get_user(user_id)
+    if user and user["is_banned"]:
+        return jsonify({"banned": True,
+                        "message": "🚫 You have been blocked by the admin.\nYou cannot access SelectionWay content."})
+    return jsonify({"banned": False})
+
 @app.route("/bot-api/batches")
 def api_batches():
     ok, data = sw_get_all_batches()

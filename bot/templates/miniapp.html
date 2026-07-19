@@ -432,6 +432,40 @@ body{
 #pmsg a{color:var(--a)}
 
 /* ════════════════════════════════════════════════════════
+   BAN SCREEN
+════════════════════════════════════════════════════════ */
+#ban-screen{
+  position:fixed;inset:0;z-index:500;
+  background:var(--bg);
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px 28px;text-align:center;
+}
+#ban-screen.show{display:flex}
+.ban-icon{
+  width:88px;height:88px;border-radius:50%;
+  background:rgba(255,60,90,.12);border:2px solid rgba(255,60,90,.3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:2.6rem;margin-bottom:24px;
+  animation:ban-pulse 2.4s ease-in-out infinite;
+}
+@keyframes ban-pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(255,60,90,.4)}
+  50%{box-shadow:0 0 0 16px rgba(255,60,90,0)}
+}
+.ban-title{
+  font-size:1.28rem;font-weight:800;margin-bottom:10px;
+  color:var(--t0)
+}
+.ban-sub{
+  font-size:.86rem;color:var(--t1);line-height:1.75;
+  max-width:300px;white-space:pre-line;
+}
+.ban-note{
+  margin-top:28px;font-size:.72rem;color:var(--t2);
+  border-top:1px solid var(--bdr);padding-top:18px;width:100%;max-width:300px
+}
+
+/* ════════════════════════════════════════════════════════
    UTILITIES
 ════════════════════════════════════════════════════════ */
 .spin-wrap{display:flex;align-items:center;justify-content:center;padding:60px 20px}
@@ -494,6 +528,14 @@ body{
 <div class="pg" id="pg-topic">
   <div id="lv-hero"></div>
   <div class="llist" id="llist"></div>
+</div>
+
+<!-- ══ BAN SCREEN ════════════════════════════════════ -->
+<div id="ban-screen">
+  <div class="ban-icon">🚫</div>
+  <div class="ban-title">You've Been Blocked</div>
+  <div class="ban-sub" id="ban-msg">You have been blocked by the admin.\nYou cannot access SelectionWay content.</div>
+  <div class="ban-note">If you think this is a mistake, contact the admin via Telegram.</div>
 </div>
 
 <!-- ══ PLAYER ══════════════════════════════════════════ -->
@@ -928,9 +970,41 @@ document.getElementById('player').addEventListener('click',e=>{
 });
 
 /* ════════════════════════════════════════════════════════
-   BOOT
+   BOOT — check ban first, then load content
 ════════════════════════════════════════════════════════ */
-loadBatches();
+async function boot(){
+  // Get Telegram user ID if available
+  let userId = 0;
+  try{
+    const tg=window.Telegram&&Telegram.WebApp;
+    if(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user){
+      userId=tg.initDataUnsafe.user.id||0;
+    }
+  }catch(e){}
+
+  if(userId){
+    try{
+      const r=await fetch('/bot-api/check-user?user_id='+userId);
+      if(r.ok){
+        const d=await r.json();
+        if(d.banned){
+          // Show ban screen, hide everything else
+          const msg=(d.message||'').replace(/\\n/g,'\n');
+          document.getElementById('ban-msg').textContent=msg;
+          document.getElementById('ban-screen').classList.add('show');
+          document.getElementById('hdr').style.display='none';
+          document.getElementById('topbar').style.display='none';
+          return; // Stop here — don't load any content
+        }
+      }
+    }catch(e){/* network error — allow access gracefully */}
+  }
+
+  // Not banned (or no user context) — load normally
+  loadBatches();
+}
+
+boot();
 </script>
 </body>
 </html>
