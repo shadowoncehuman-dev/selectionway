@@ -1,0 +1,3 @@
+- [SelectionWay bot architecture](selectionway-arch.md) — Flask + Telegram polling in one process; API routes are /bot-api/ not /api/
+- [SelectionWay thumbnail fix](selectionway-thumbnails.md) — use `banner` field only (always 200); bannerSquare is stale/404 for some batches; no proxy needed for img tags
+- [SelectionWay ban flow](selectionway-ban.md) — /bot-api/check-user endpoint checks DB; mini app calls it on boot and shows block screen if banned
