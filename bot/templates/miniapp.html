@@ -988,12 +988,10 @@ async function boot(){
       if(r.ok){
         const d=await r.json();
         if(d.banned){
-          // Show ban screen, hide everything else
-          const msg=(d.message||'').replace(/\\n/g,'\n');
-          document.getElementById('ban-msg').textContent=msg;
-          document.getElementById('ban-screen').classList.add('show');
-          document.getElementById('hdr').style.display='none';
-          document.getElementById('topbar').style.display='none';
+          // Immediately close the mini app — banned users see nothing
+          if(window.Telegram&&Telegram.WebApp&&Telegram.WebApp.close){
+            Telegram.WebApp.close();
+          }
           return; // Stop here — don't load any content
         }
       }
