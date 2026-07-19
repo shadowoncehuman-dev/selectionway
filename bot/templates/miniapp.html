@@ -988,11 +988,20 @@ async function boot(){
       if(r.ok){
         const d=await r.json();
         if(d.banned){
-          // Immediately close the mini app — banned users see nothing
-          if(window.Telegram&&Telegram.WebApp&&Telegram.WebApp.close){
-            Telegram.WebApp.close();
+          const msg=d.message||'You have been blocked by the admin.\nYou cannot access SelectionWay content.';
+          const tg=window.Telegram&&Telegram.WebApp;
+          if(tg&&tg.showPopup){
+            // Show a native Telegram popup, then close
+            tg.showPopup({
+              title:'🚫 Access Blocked',
+              message:msg,
+              buttons:[{type:'close',text:'OK'}]
+            },()=>tg.close());
+          }else if(tg&&tg.close){
+            // No popup API — close immediately
+            tg.close();
           }
-          return; // Stop here — don't load any content
+          return;
         }
       }
     }catch(e){/* network error — allow access gracefully */}
