@@ -13,6 +13,9 @@ localPort = 19670
 [services.development]
 run = "cd ../../bot && python main.py"
 
+[services.production]
+run = "cd ../../bot && python main.py"
+
 [services.env]
 PORT = "19670"
 BASE_PATH = "/"
