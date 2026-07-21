@@ -44,7 +44,7 @@ body{
 /* ── HEADER ─────────────────────────────────────────── */
 #hdr{
   position:fixed;top:0;left:0;right:0;z-index:80;
-  height:56px;
+  height:58px;
   display:flex;align-items:center;gap:10px;
   padding:0 16px;
   background:var(--hdr);
@@ -64,13 +64,12 @@ body{
 
 #brand{flex:1;min-width:0;display:flex;align-items:center;gap:9px}
 .brand-logo{
-  width:30px;height:30px;border-radius:8px;
-  background:linear-gradient(135deg,#7c5cfe,#5c3bfe);
+  width:34px;height:34px;border-radius:9px;
+  overflow:hidden;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
-  font-size:.85rem;font-weight:900;color:#fff;
-  flex-shrink:0;
   box-shadow:0 2px 8px rgba(92,59,254,.4);
 }
+.brand-logo img{width:100%;height:100%;object-fit:contain}
 .brand-text{min-width:0}
 .brand-name{
   font-size:1rem;font-weight:800;color:#fff;
@@ -499,7 +498,7 @@ body{
 <div id="hdr">
   <button id="back" onclick="navBack()">‹</button>
   <div id="brand">
-    <div class="brand-logo">SW</div>
+    <div class="brand-logo"><img src="/static/logo.png" alt="SW"></div>
     <div class="brand-text">
       <div class="brand-name">SelectionWay</div>
       <div class="brand-sub">Course Browser</div>
@@ -719,27 +718,31 @@ function applyFilters(q,cat){
   renderBatches(SHOWN);
 }
 
-/* ── THUMBNAIL LOADER (proxy-first for external URLs) ─ */
+/* ── THUMBNAIL LOADER ─────────────────────────────────
+   Always route external images through /proxy-img so the
+   server adds the correct Referer header that the CDN
+   (selectionwayserver.hranker.com) requires.
+   Direct browser loads are blocked by hotlink protection.
+─────────────────────────────────────────────────────── */
+function proxyUrl(src){
+  if(!src) return '';
+  // Already proxied or same-origin — serve as-is
+  if(src.startsWith('/')||src.includes(location.hostname)) return src;
+  return '/proxy-img?url='+encodeURIComponent(src);
+}
+
 function loadImg(img){
   const src=img.dataset.s;
   if(!src){img.removeAttribute('data-s');return;}
-  const isExternal=src.startsWith('http')&&!src.includes(location.hostname);
 
   img.onload=()=>{
     img.classList.add('rdy');
-    // Hide placeholder once image is shown
     const ph=img.closest('.cimg,.dthumb-wrap')?.querySelector('.cph');
     if(ph)ph.style.display='none';
   };
-  img.onerror=()=>{
-    if(isExternal&&!img.src.includes('/proxy-img')){
-      // First failure on external URL → try proxy with correct Referer
-      img.src='/proxy-img?url='+encodeURIComponent(src);
-    }
-    // If proxy also fails, placeholder emoji stays visible
-  };
+  // If even the proxy fails, keep the placeholder emoji (no action needed)
 
-  img.src=src;
+  img.src=proxyUrl(src);
   img.removeAttribute('data-s');
 }
 
@@ -819,8 +822,7 @@ function renderBatch(data){
   <div class="dhero">
     <div class="dthumb-wrap">
       ${meta.thumb
-        ?`<img src="${H(meta.thumb)}" alt=""
-               onerror="if(!this.src.includes('/proxy-img')){this.src='/proxy-img?url='+encodeURIComponent('${H(meta.thumb)}')}">`
+        ?`<img src="${H(proxyUrl(meta.thumb))}" alt="">`
         :`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:3rem">📚</div>`}
     </div>
     <div class="dcat">${H(meta.category)}</div>
