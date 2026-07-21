@@ -31,8 +31,12 @@ ADMIN_WEB_PASSWORD = os.environ.get("ADMIN_WEB_PASSWORD", "admin123")
 PORT = int(os.environ.get("PORT", 5000))
 DB_PATH = os.path.join(os.path.dirname(__file__), "bot_data.db")
 
-# The public URL for the Mini App WebApp button (uses Replit dev domain)
+# The public URL for the Mini App WebApp button.
+# Priority: WEBAPP_URL (Railway/prod) > REPLIT_DEV_DOMAIN (Replit) > localhost
 def get_webapp_url():
+    webapp_url = os.environ.get("WEBAPP_URL", "").rstrip("/")
+    if webapp_url:
+        return webapp_url
     domain = os.environ.get("REPLIT_DEV_DOMAIN", "")
     if domain:
         return f"https://{domain}"
