@@ -1,45 +1,51 @@
-# [Project name]
+# SelectionWay Bot
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A Telegram bot + Mini App that lets users browse and watch course content from selectionway.com. Users interact via Telegram; the Mini App opens in Telegram's built-in browser for rich course browsing.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- **On Replit**: run `python bot/main.py` (set env vars below first)
+- **On Railway**: connect the GitHub repo — Railway auto-detects `railway.toml` and runs `python bot/main.py`
+
+## Required Environment Variables
+
+| Variable | Description |
+|---|---|
+| `BOT_TOKEN` | Telegram bot token from @BotFather |
+| `ADMIN_IDS` | Comma-separated Telegram user IDs with admin access |
+| `ADMIN_WEB_PASSWORD` | Password for the web admin portal at `/admin` |
+| `SESSION_SECRET` | Flask session secret key |
+| `WEBAPP_URL` | **Railway/prod only** — public URL of the deployed service (e.g. `https://your-app.up.railway.app`). The bot uses this as the Mini App button URL. |
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Python 3.12, Flask, python-telegram-bot 21.6
+- SQLite (runtime DB — `bot/bot_data.db`, not committed)
+- Telegram Bot API + Web App (Mini App)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `bot/main.py` — entire backend: Flask routes, Telegram bot handlers, DB helpers, SelectionWay API calls
+- `bot/templates/` — Jinja2 HTML templates (Mini App UI + Admin portal)
+- `bot/bot_data.db` — SQLite DB (users, fetch log) — gitignored, created at runtime
+- `railway.toml` — Railway deployment config
+- `Procfile` — fallback start command for Heroku-style platforms
+- `requirements.txt` — Python dependencies (root level for Railway auto-detection)
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
-
-## Product
-
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Flask + Telegram polling run in one process: bot in a daemon thread, Flask in the main thread.
+- API routes use `/bot-api/` prefix (not `/api/`) to avoid conflicts.
+- HLS streams are proxied through `/hls?url=` so the Mini App WebView can play them (CORS workaround).
+- Thumbnails use the `banner` field only — `bannerSquare` can 404 on some batches.
+- `WEBAPP_URL` env var takes priority over `REPLIT_DEV_DOMAIN` for the Mini App button URL.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Deploy on Railway via GitHub repo `shadowoncehuman-dev/selectionway`.
+- Changes are made on Replit and pushed to GitHub using the `github_token` secret.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- `bot_data.db` is gitignored — Railway will create a fresh DB on each deploy (ephemeral). Consider adding a PostgreSQL addon on Railway if you need persistent user data across deploys.
+- Always set `WEBAPP_URL` on Railway to the service's public URL, otherwise the Mini App button in Telegram won't link correctly.
