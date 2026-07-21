@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: selectionway-bot
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot/main.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_IDS
+        sync: false
+      - key: ADMIN_WEB_PASSWORD
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: WEBAPP_URL
+        sync: false
