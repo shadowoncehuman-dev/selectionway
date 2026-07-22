@@ -31,6 +31,10 @@ ADMIN_WEB_PASSWORD = os.environ.get("ADMIN_WEB_PASSWORD", "admin123")
 PORT = int(os.environ.get("PORT", 5000))
 DB_PATH = os.path.join(os.path.dirname(__file__), "bot_data.db")
 
+# ── Channel membership requirement ──────────────────────────────
+REQUIRED_CHANNEL_ID = -1002304109021
+CHANNEL_JOIN_LINK   = "https://t.me/+b4XsqbeHbpphMjc1"
+
 # The public URL for the Mini App WebApp button.
 # Priority: WEBAPP_URL (Railway/prod) > REPLIT_DEV_DOMAIN (Replit) > localhost
 def get_webapp_url():
@@ -194,6 +198,23 @@ BASE_HEADERS = {
     "accept-encoding": "gzip, deflate",   # no br/zstd — urllib3 can't decode them
     "accept-language": "en-US,en;q=0.9",
 }
+
+def check_telegram_channel_member(user_id: int) -> bool:
+    """Synchronously check if a user has joined REQUIRED_CHANNEL_ID via Bot API REST."""
+    try:
+        r = requests.get(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/getChatMember",
+            params={"chat_id": REQUIRED_CHANNEL_ID, "user_id": user_id},
+            timeout=10,
+        )
+        if r.status_code == 200:
+            d = r.json()
+            if d.get("ok"):
+                return d["result"]["status"] not in ("left", "kicked")
+    except Exception:
+        pass
+    return False
+
 
 def sw_get_all_batches():
     try:
@@ -609,6 +630,18 @@ def api_check_user():
                         "message": "🚫 You have been blocked by the admin.\nYou cannot access SelectionWay content."})
     return jsonify({"banned": False})
 
+@app.route("/bot-api/check-channel")
+def api_check_channel():
+    """Mini App calls this on load to verify the user has joined the required channel."""
+    try:
+        user_id = int(request.args.get("user_id", 0))
+    except (ValueError, TypeError):
+        return jsonify({"joined": True})
+    if not user_id:
+        return jsonify({"joined": True})
+    joined = check_telegram_channel_member(user_id)
+    return jsonify({"joined": joined, "join_link": CHANNEL_JOIN_LINK})
+
 @app.route("/bot-api/batches")
 def api_batches():
     ok, data = sw_get_all_batches()
@@ -633,7 +666,7 @@ def api_batches():
             "isLive":      bool(b.get("isLive")),
             "liveNow":     live_now,
             "validity":    b.get("validity", ""),
-            "totalClass":  b.get("liveClassesCount", 0),
+            "totalClass":  (b.get("liveClassesCount") or 0) + (b.get("recordedClassesCount") or 0),
             "faculty":     (b.get("facultyDetails") or {}).get("name", ""),
         })
     return jsonify(slim)
@@ -851,6 +884,21 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name_md    = user.first_name or "there"
     webapp_url = get_webapp_url()
 
+    # ── Channel membership gate (skip for admins) ──────────────
+    if not admin_flag:
+        if not check_telegram_channel_member(uid):
+            await update.message.reply_text(
+                f"👋 *Welcome to SelectionWay Bot, {name_md}!*\n\n"
+                f"📢 To access our courses and study content you must first join our official channel.\n\n"
+                f"👇 Join below, then tap *I've Joined* to continue:",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("📢 Join SelectionWay Channel", url=CHANNEL_JOIN_LINK)],
+                    [InlineKeyboardButton("✅ I've Joined — Check Now", callback_data="join:check")],
+                ]),
+                parse_mode="Markdown",
+            )
+            return
+
     if admin_flag:
         greeting = (
             f"👑 *Welcome back, Admin {name_md}!*\n\n"
@@ -907,6 +955,28 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     uid  = query.from_user.id
     data = query.data
+
+    # ── Channel join check callback ─────────────────────────────
+    if data == "join:check":
+        if check_telegram_channel_member(uid):
+            webapp_url = get_webapp_url()
+            name_md = query.from_user.first_name or "there"
+            await query.message.edit_text(
+                f"✅ *You're all set, {name_md}!*\n\n"
+                f"Welcome to SelectionWay Bot.\n"
+                f"Browse all our courses and study materials below:",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("📚 Open Course Browser",
+                                          web_app=WebAppInfo(url=webapp_url))],
+                ]),
+                parse_mode="Markdown",
+            )
+        else:
+            await query.answer(
+                "❌ You haven't joined yet!\n\nPlease join the channel first, then tap the button again.",
+                show_alert=True,
+            )
+        return
 
     if not data.startswith("adm:"):
         return

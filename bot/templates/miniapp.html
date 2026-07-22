@@ -452,6 +452,94 @@ body{
 }
 #pmsg a{color:#7c5cfe}
 
+/* ── CHANNEL GATE ───────────────────────────────────── */
+#channel-gate{
+  position:fixed;inset:0;z-index:600;
+  background:var(--hdr);
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  padding:36px 28px;text-align:center;
+}
+#channel-gate.show{display:flex}
+.cg-logo{
+  width:80px;height:80px;border-radius:20px;overflow:hidden;
+  margin-bottom:24px;
+  box-shadow:0 8px 32px rgba(92,59,254,.5);
+}
+.cg-logo img{width:100%;height:100%;object-fit:contain}
+.cg-title{
+  font-size:1.3rem;font-weight:800;color:#fff;
+  margin-bottom:10px;line-height:1.3;
+}
+.cg-sub{
+  font-size:.88rem;color:rgba(255,255,255,.6);
+  line-height:1.7;max-width:280px;margin-bottom:32px;
+}
+.cg-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;max-width:300px;padding:15px 20px;
+  border-radius:var(--rp);border:none;cursor:pointer;
+  font-size:.95rem;font-weight:700;
+  transition:transform .14s,box-shadow .14s;
+}
+.cg-btn:active{transform:scale(.95)}
+.cg-join{
+  background:linear-gradient(135deg,#5c3bfe,#7c5cfe);
+  color:#fff;box-shadow:0 4px 20px rgba(92,59,254,.4);
+  margin-bottom:12px;
+  text-decoration:none;
+}
+.cg-check{
+  background:rgba(255,255,255,.12);
+  color:#fff;border:1.5px solid rgba(255,255,255,.18);
+}
+.cg-check.checking{opacity:.6;pointer-events:none}
+.cg-note{
+  margin-top:24px;font-size:.7rem;color:rgba(255,255,255,.3);
+}
+
+/* ── NOTES / PDFs ───────────────────────────────────── */
+.notes-sec{padding:0 12px 20px}
+.notes-hdr{
+  display:flex;align-items:center;gap:8px;
+  padding:18px 4px 10px;
+  font-size:.68rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.1em;color:var(--t1);
+}
+.notes-hdr::after{content:'';flex:1;height:1.5px;background:var(--bdr)}
+.note-card{
+  display:flex;align-items:center;gap:12px;
+  background:var(--card);border-radius:var(--rb);
+  border:1px solid var(--bdr);padding:12px 14px;
+  margin-bottom:8px;cursor:pointer;
+  text-decoration:none;
+  transition:transform .12s,box-shadow .12s;
+}
+.note-card:active{transform:scale(.975);box-shadow:var(--shadow)}
+.note-ico{
+  width:36px;height:36px;border-radius:9px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;
+}
+.note-ico.pdf{background:#fff0f0;color:#e53935}
+.note-ico.test{background:#fff8e1;color:#f59300}
+.note-txt{flex:1;min-width:0}
+.note-name{font-size:.84rem;font-weight:600;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.note-topic{font-size:.7rem;color:var(--t2);margin-top:2px}
+.note-arr{color:var(--t2);font-size:1.1rem;flex-shrink:0}
+
+/* ── CLASS PDF BADGES ───────────────────────────────── */
+.class-docs{
+  display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;
+}
+.doc-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:.65rem;font-weight:600;
+  padding:3px 9px;border-radius:var(--rp);
+  text-decoration:none;
+}
+.doc-badge.pdf{background:#fff0f0;color:#e53935}
+.doc-badge.test{background:#fff8e1;color:#f59300}
+
 /* ── BAN SCREEN ─────────────────────────────────────── */
 #ban-screen{
   position:fixed;inset:0;z-index:500;
@@ -545,6 +633,22 @@ body{
 <div class="pg" id="pg-topic">
   <div id="lv-hero"></div>
   <div class="llist" id="llist"></div>
+</div>
+
+<!-- ── CHANNEL GATE ─────────────────────────────────── -->
+<div id="channel-gate">
+  <div class="cg-logo"><img src="/static/logo.png" alt="SW"></div>
+  <div class="cg-title">Join Our Channel First</div>
+  <div class="cg-sub">
+    To access SelectionWay courses and study materials, you must be a member of our official channel.
+  </div>
+  <a id="cg-join-btn" class="cg-btn cg-join" href="#" target="_blank">
+    📢 Join SelectionWay Channel
+  </a>
+  <button class="cg-btn cg-check" id="cg-check-btn" onclick="checkChannelAndContinue()">
+    ✅ I've Joined — Continue
+  </button>
+  <div class="cg-note">You will be able to access all content after joining.</div>
 </div>
 
 <!-- ── BAN SCREEN ──────────────────────────────────── -->
@@ -835,27 +939,59 @@ function renderBatch(data){
   </div>`;
 
   const topics=data.topics||[];
+  const allPdfs=data.pdf_links||[];
+  const allTests=data.test_links||[];
+
   if(!topics.length){
+    const planned=(meta.totalClass||0);
     document.getElementById('topic-list').innerHTML=
-      '<div class="empty"><em>📭</em>No classes yet.</div>';
-    syncHdr();return;
+      `<div class="empty"><em>📭</em>${planned>0?'Classes coming soon…':'No classes yet.'}</div>`;
+  }else{
+    document.getElementById('topic-list').innerHTML=topics.map((t,i)=>{
+      const ico=TICONS[i%TICONS.length];
+      const cnt=(t.classes||[]).length;
+      const sub=[t.teacher,cnt+(cnt===1?' class':' classes')].filter(Boolean).join(' · ');
+      return `
+      <div class="tcard" style="--cc:${st.c};animation:floatUp .36s var(--spring) ${Math.min(i*40,280)}ms both"
+           onclick="openTopic(${i})">
+        <div class="tico">${ico}</div>
+        <div class="ttext">
+          <div class="tname">${H(t.name)}</div>
+          <div class="tsub">${H(sub)}</div>
+        </div>
+        <div class="tcnt">${cnt}</div>
+        <div class="tarr">›</div>
+      </div>`;
+    }).join('');
   }
-  document.getElementById('topic-list').innerHTML=topics.map((t,i)=>{
-    const ico=TICONS[i%TICONS.length];
-    const cnt=(t.classes||[]).length;
-    const sub=[t.teacher,cnt+(cnt===1?' class':' classes')].filter(Boolean).join(' · ');
-    return `
-    <div class="tcard" style="--cc:${st.c};animation:floatUp .36s var(--spring) ${Math.min(i*40,280)}ms both"
-         onclick="openTopic(${i})">
-      <div class="tico">${ico}</div>
-      <div class="ttext">
-        <div class="tname">${H(t.name)}</div>
-        <div class="tsub">${H(sub)}</div>
-      </div>
-      <div class="tcnt">${cnt}</div>
-      <div class="tarr">›</div>
+
+  // Notes & PDFs section
+  const notesEl=document.getElementById('topic-list');
+  if(allPdfs.length||allTests.length){
+    const noteHtml=`
+    <div class="notes-sec">
+      <div class="notes-hdr">📄 Notes &amp; Study Material</div>
+      ${allPdfs.map(p=>`
+      <a class="note-card" href="${H(p.url||'#')}" target="_blank">
+        <div class="note-ico pdf">📄</div>
+        <div class="note-txt">
+          <div class="note-name">${H(p.name||'PDF')}</div>
+          <div class="note-topic">${H(p.topic||'')}</div>
+        </div>
+        <div class="note-arr">↗</div>
+      </a>`).join('')}
+      ${allTests.map(t=>`
+      <a class="note-card" href="${H(t.url||'#')}" target="_blank">
+        <div class="note-ico test">📝</div>
+        <div class="note-txt">
+          <div class="note-name">${H(t.name||'Test')}</div>
+          <div class="note-topic">${H(t.topic||'')}</div>
+        </div>
+        <div class="note-arr">↗</div>
+      </a>`).join('')}
     </div>`;
-  }).join('');
+    notesEl.insertAdjacentHTML('beforeend', noteHtml);
+  }
   syncHdr();
 }
 
@@ -885,6 +1021,13 @@ function openTopic(idx){
       const play=!!(vid&&vid.playable);
       const m=[c.duration_text,c.date_text].filter(Boolean).join(' · ');
       const lt=c.live?'<span class="ltag">LIVE</span>':'';
+      const pdfs=(c.pdfs||[]).map(p=>
+        `<a class="doc-badge pdf" href="${H(p.url||'#')}" target="_blank" onclick="event.stopPropagation()">📄 ${H(p.name||'PDF')}</a>`
+      ).join('');
+      const tests=(c.tests||[]).map(t=>
+        `<a class="doc-badge test" href="${H(t.url||'#')}" target="_blank" onclick="event.stopPropagation()">📝 ${H(t.name||'Test')}</a>`
+      ).join('');
+      const docs=pdfs+tests;
       return `
       <div class="lcard ${play?'play':'locked'}"
            ${play?`onclick="playVideo(${c.video_index})"`:''}>
@@ -892,6 +1035,7 @@ function openTopic(idx){
         <div class="ltext">
           <div class="ltitle">${lt}${H(c.title)}</div>
           ${m?`<div class="lmeta">${H(m)}</div>`:''}
+          ${docs?`<div class="class-docs">${docs}</div>`:''}
         </div>
         ${play?'<div class="pbtn">▶</div>':''}
       </div>`;
@@ -970,27 +1114,66 @@ document.getElementById('player').addEventListener('click',e=>{
   if(e.target===e.currentTarget)closePlayer();
 });
 
+/* ── CHANNEL GATE ─────────────────────────────────── */
+let _userId=0;
+async function checkChannelAndContinue(){
+  const btn=document.getElementById('cg-check-btn');
+  btn.classList.add('checking');
+  btn.textContent='Checking…';
+  try{
+    const r=await fetch('/bot-api/check-channel?user_id='+_userId);
+    if(r.ok){
+      const d=await r.json();
+      if(d.joined){
+        document.getElementById('channel-gate').classList.remove('show');
+        loadBatches();
+        return;
+      }
+    }
+  }catch(e){}
+  btn.classList.remove('checking');
+  btn.textContent='✅ I\'ve Joined — Continue';
+  const tg=window.Telegram&&Telegram.WebApp;
+  if(tg&&tg.showAlert){
+    tg.showAlert('❌ You haven\'t joined the channel yet.\n\nPlease join and then try again.');
+  }else{
+    alert('❌ Please join the channel first, then try again.');
+  }
+}
+
 /* ── BOOT ─────────────────────────────────────────── */
 async function boot(){
-  let userId=0;
   try{
     const tg=window.Telegram&&Telegram.WebApp;
     if(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user)
-      userId=tg.initDataUnsafe.user.id||0;
+      _userId=tg.initDataUnsafe.user.id||0;
   }catch(e){}
 
-  if(userId){
+  if(_userId){
+    // 1) Ban check + channel check in parallel
     try{
-      const r=await fetch('/bot-api/check-user?user_id='+userId);
-      if(r.ok){
-        const d=await r.json();
+      const [banRes,chanRes]=await Promise.all([
+        fetch('/bot-api/check-user?user_id='+_userId).catch(()=>null),
+        fetch('/bot-api/check-channel?user_id='+_userId).catch(()=>null),
+      ]);
+      if(banRes&&banRes.ok){
+        const d=await banRes.json();
         if(d.banned){
           const msg=d.message||'You have been blocked by the admin.';
           const tg=window.Telegram&&Telegram.WebApp;
-          if(tg&&tg.showPopup){
-            tg.showPopup({title:'🚫 Access Blocked',message:msg,
-              buttons:[{type:'close',text:'OK'}]},()=>tg.close());
-          }else if(tg&&tg.close){tg.close();}
+          const bs=document.getElementById('ban-screen');
+          document.getElementById('ban-msg').textContent=msg;
+          bs.classList.add('show');
+          return;
+        }
+      }
+      if(chanRes&&chanRes.ok){
+        const d=await chanRes.json();
+        if(!d.joined){
+          // Show channel gate
+          const btn=document.getElementById('cg-join-btn');
+          if(d.join_link)btn.href=d.join_link;
+          document.getElementById('channel-gate').classList.add('show');
           return;
         }
       }
