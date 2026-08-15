@@ -50,6 +50,10 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
 )
+# Telegram's HTTP client includes the bot token in request URLs at INFO level.
+# Keep those URLs out of workflow and deployment logs.
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 MAX_MESSAGE_LENGTH = 3500
