@@ -1,0 +1,34 @@
+kind = "web"
+previewPath = "/"
+title = "SelectionWay Bot"
+version = "1.0.0"
+id = "artifacts/selectionway-bot"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19670
+
+[services.development]
+run = "cd ../../bot && python main.py"
+
+[services.production]
+
+[services.production.build]
+args = ["pnpm", "--filter", "@workspace/selectionway-bot", "run", "build"]
+
+[services.production.build.env]
+PORT = "19670"
+BASE_PATH = "/"
+
+[services.production.run]
+args = ["python", "bot/main.py"]
+
+[services.production.run.env]
+PORT = "19670"
+PYTHONUNBUFFERED = "1"
+
+[services.env]
+PORT = "19670"
+BASE_PATH = "/"

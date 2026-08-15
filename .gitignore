@@ -47,3 +47,7 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# SQLite database (runtime data, not for version control)
+*.db
+bot/bot_data.db
