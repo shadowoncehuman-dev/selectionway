@@ -756,8 +756,10 @@ def api_batches():
     slim = []
     for b in sorted_data:
         cat = (b.get("mainCategory") or {}).get("mainCategoryName", "")
-        # Force the specific thumbnail URL for all batches
-        thumb = FORCED_THUMBNAIL_URL
+        # Use API-fetched thumbnail for batches (banner, bannerSquare, etc.)
+        thumb = (b.get("banner") or b.get("bannerSquare") or
+                 b.get("bannerLandscape") or b.get("thumbnail") or
+                 b.get("image") or b.get("coverImage") or b.get("photo") or "")
         live_now = is_batch_live_now(b)
         slim.append({
             "id":          b.get("id"),
@@ -792,8 +794,10 @@ def api_batch_classes(batch_id):
 
     result = build_classes_data(classes_data, batch_meta)
 
-    # Force the specific thumbnail URL for batch meta
-    thumb = FORCED_THUMBNAIL_URL
+    # Use API-fetched thumbnail for batch meta (banner, bannerSquare, etc.)
+    thumb = (batch_meta.get("banner") or batch_meta.get("bannerSquare") or
+             batch_meta.get("bannerLandscape") or batch_meta.get("thumbnail") or
+             batch_meta.get("image") or batch_meta.get("coverImage") or batch_meta.get("photo") or "")
 
     cat = (batch_meta.get("mainCategory") or {}).get("mainCategoryName", "")
     desc_items = batch_meta.get("description") or []
@@ -814,7 +818,7 @@ def api_batch_classes(batch_id):
         "highlights":  highlights[:5],
     }
 
-    # Force thumbnail on all topics
+    # Force thumbnail on all topics (Topics & Chapters)
     for topic in result.get("topics", []):
         topic["thumb"] = FORCED_THUMBNAIL_URL
 
