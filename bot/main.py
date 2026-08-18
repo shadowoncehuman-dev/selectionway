@@ -88,6 +88,21 @@ def init_db():
             batch_name  TEXT,
             fetched_at  TEXT DEFAULT (datetime('now'))
         );
+        CREATE TABLE IF NOT EXISTS offline_messages (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id     INTEGER NOT NULL,
+            username    TEXT,
+            first_name  TEXT,
+            message_text TEXT NOT NULL,
+            message_type TEXT DEFAULT 'text',
+            received_at TEXT DEFAULT (datetime('now')),
+            notified    INTEGER DEFAULT 0
+        );
+        CREATE TABLE IF NOT EXISTS bot_status (
+            key         TEXT PRIMARY KEY,
+            value       TEXT,
+            updated_at  TEXT DEFAULT (datetime('now'))
+        );
         """)
 
 def db_ensure_user(user_id: int, username: str = "", first_name: str = ""):
@@ -165,6 +180,48 @@ def db_stats():
             "SELECT COUNT(*) FROM fetch_log WHERE fetched_at >= datetime('now','-1 day')"
         ).fetchone()[0]
     return {"total": total, "banned": banned, "fetches": fetches, "today": today}
+
+# ─────────────────────────────────────────────────────────────────
+# Bot Status & Offline Messages
+# ─────────────────────────────────────────────────────────────────
+
+def db_set_bot_online(online: bool):
+    """Set bot online/offline status."""
+    with _get_db() as db:
+        db.execute("""
+            INSERT INTO bot_status (key, value, updated_at)
+            VALUES ('online', ?, datetime('now'))
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+        """, ("1" if online else "0",))
+
+def db_is_bot_online() -> bool:
+    """Check if bot is currently online."""
+    with _get_db() as db:
+        row = db.execute("SELECT value FROM bot_status WHERE key = 'online'").fetchone()
+        return row and row[0] == "1"
+
+def db_store_offline_message(user_id: int, username: str, first_name: str, message_text: str, message_type: str = "text"):
+    """Store a message received while bot is offline."""
+    with _get_db() as db:
+        db.execute("""
+            INSERT INTO offline_messages (user_id, username, first_name, message_text, message_type)
+            VALUES (?, ?, ?, ?, ?)
+        """, (user_id, username or "", first_name or "", message_text, message_type))
+
+def db_get_unnotified_offline_messages():
+    """Get all offline messages that haven't been notified yet."""
+    with _get_db() as db:
+        return db.execute("""
+            SELECT * FROM offline_messages WHERE notified = 0 ORDER BY received_at ASC
+        """).fetchall()
+
+def db_mark_offline_messages_notified(message_ids: list):
+    """Mark offline messages as notified."""
+    if not message_ids:
+        return
+    with _get_db() as db:
+        placeholders = ",".join("?" * len(message_ids))
+        db.execute(f"UPDATE offline_messages SET notified = 1 WHERE id IN ({placeholders})", message_ids)
 
 def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
@@ -1117,6 +1174,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text    = update.message.text
     db_ensure_user(uid, user.username or "", user.first_name or "")
 
+    # Check if bot is online
+    if not db_is_bot_online():
+        # Bot is offline - store the message and notify user
+        db_store_offline_message(uid, user.username or "", user.first_name or "", text, "text")
+        await update.message.reply_text(
+            "🤖 *Bot is currently offline*\n\n"
+            "Your message has been saved. I'll reply as soon as I'm back online!",
+            parse_mode="Markdown",
+        )
+        return
+
     # Admin setting a limit
     if context.user_data.get("admin_setting_limit_for") and is_admin(uid):
         target_uid = context.user_data.pop("admin_setting_limit_for")
@@ -1175,7 +1243,67 @@ async def post_init(application):
         BotCommand("admin", "Admin panel (admins only)"),
     ]
     await application.bot.set_my_commands(commands)
-    logger.info("Bot commands registered.")
+    
+    # Set bot status to online
+    db_set_bot_online(True)
+    logger.info("Bot commands registered and status set to online.")
+    
+    # Notify users who sent messages while bot was offline
+    await notify_offline_users(application.bot)
+
+async def notify_offline_users(bot):
+    """Notify users who sent messages while bot was offline."""
+    offline_messages = db_get_unnotified_offline_messages()
+    if not offline_messages:
+        return
+    
+    # Group messages by user
+    user_messages = {}
+    for msg in offline_messages:
+        user_id = msg["user_id"]
+        if user_id not in user_messages:
+            user_messages[user_id] = {
+                "username": msg["username"],
+                "first_name": msg["first_name"],
+                "messages": []
+            }
+        user_messages[user_id]["messages"].append(msg)
+    
+    # Notify each user
+    notified_message_ids = []
+    for user_id, data in user_messages.items():
+        try:
+            message_count = len(data["messages"])
+            name = data["first_name"] or data["username"] or f"User {user_id}"
+            
+            if message_count == 1:
+                msg_text = data["messages"][0]["message_text"]
+                await bot.send_message(
+                    chat_id=user_id,
+                    text=f"🤖 *I'm back online!*\n\n"
+                         f"You sent this message while I was offline:\n"
+                         f"💬 \"{msg_text}\"\n\n"
+                         f"How can I help you now?",
+                    parse_mode="Markdown"
+                )
+            else:
+                await bot.send_message(
+                    chat_id=user_id,
+                    text=f"🤖 *I'm back online!*\n\n"
+                         f"You sent {message_count} messages while I was offline.\n"
+                         f"I've received them all. How can I help you now?",
+                    parse_mode="Markdown"
+                )
+            # Collect message IDs to mark as notified
+            for msg in data["messages"]:
+                notified_message_ids.append(msg["id"])
+        except Exception as e:
+            logger.warning(f"Failed to notify user {user_id}: {e}")
+    
+    # Mark messages as notified
+    if notified_message_ids:
+        db_mark_offline_messages_notified(notified_message_ids)
+        logger.info(f"Notified {len(user_messages)} users about {len(notified_message_ids)} offline messages")
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -1193,6 +1321,7 @@ def run_bot():
         Application.builder()
         .token(BOT_TOKEN)
         .post_init(post_init)
+        .post_shutdown(post_shutdown)
         .build()
     )
     application.add_handler(CommandHandler("start", cmd_start))
@@ -1210,6 +1339,11 @@ def run_bot():
             await stop_signal.wait()
 
     loop.run_until_complete(_run())
+
+async def post_shutdown(application):
+    """Called when bot is shutting down."""
+    db_set_bot_online(False)
+    logger.info("Bot status set to offline.")
 
 
 def main():
