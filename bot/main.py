@@ -4,7 +4,7 @@ SelectionWay Telegram Bot
 - Flask web server: Mini App UI, HLS proxy, image/video proxy, Admin portal
 - SQLite user DB with rate limiting
 """
-import os, re, json, html, sqlite3, threading, requests, logging, asyncio
+import os, re, json, html, sqlite3, threading, requests, logging, asyncio, time
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from urllib.parse import urljoin, parse_qs, quote, urlparse
@@ -22,6 +22,10 @@ from telegram.ext import (Application, CommandHandler, CallbackQueryHandler,
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN environment variable is not set.")
+
+# Keep-alive configuration for Render free tier
+KEEP_ALIVE_URL = os.environ.get("KEEP_ALIVE_URL", "https://selectionway-a7ia.onrender.com/health")
+KEEP_ALIVE_INTERVAL = int(os.environ.get("KEEP_ALIVE_INTERVAL", "300"))  # 5 minutes default
 
 # Waifu.im API configuration
 WAIFU_API_BASE = "https://api.waifu.im"
@@ -746,6 +750,16 @@ def api_check_channel():
     joined = check_telegram_channel_member(user_id)
     return jsonify({"joined": joined, "join_link": CHANNEL_JOIN_LINK})
 
+@app.route("/health")
+def health_check():
+    """Health check endpoint for monitoring and keeping the service alive."""
+    return jsonify({
+        "status": "healthy",
+        "service": "SelectionWay Bot",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "bot_online": db_is_bot_online(),
+    })
+
 @app.route("/bot-api/batches")
 def api_batches():
     ok, data = sw_get_all_batches()
@@ -1073,16 +1087,9 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Send welcome message with waifu image if available
     if waifu_image and waifu_image.get("url"):
-        # Add image credit to caption
-        artist = waifu_image.get("artist", "Unknown")
-        source = waifu_image.get("source", "")
-        credit = f"\n\n🎨 *Art by:* {artist}"
-        if source:
-            credit += f" | [Source]({source})"
-        
         await update.message.reply_photo(
             photo=waifu_image["url"],
-            caption=greeting + credit,
+            caption=greeting,
             reply_markup=InlineKeyboardMarkup(kb_rows),
             parse_mode="Markdown",
         )
@@ -1133,16 +1140,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             
             if waifu_image and waifu_image.get("url"):
-                artist = waifu_image.get("artist", "Unknown")
-                source = waifu_image.get("source", "")
-                credit = f"\n\n🎨 *Art by:* {artist}"
-                if source:
-                    credit += f" | [Source]({source})"
-                
                 await query.message.edit_media(
                     media=InputMediaPhoto(
                         media=waifu_image["url"],
-                        caption=success_text + credit,
+                        caption=success_text,
                         parse_mode="Markdown"
                     ),
                     reply_markup=InlineKeyboardMarkup([
@@ -1398,15 +1399,9 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     
     if waifu_image and waifu_image.get("url"):
-        artist = waifu_image.get("artist", "Unknown")
-        source = waifu_image.get("source", "")
-        credit = f"\n\n🎨 *Art by:* {artist}"
-        if source:
-            credit += f" | [Source]({source})"
-        
         await update.message.reply_photo(
             photo=waifu_image["url"],
-            caption=help_text + credit,
+            caption=help_text,
             parse_mode="Markdown",
         )
     else:
@@ -1428,19 +1423,13 @@ async def cmd_waifu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     waifu_image = await fetch_random_waifu_image(tags=tags, nsfw=False)
     
     if waifu_image and waifu_image.get("url"):
-        artist = waifu_image.get("artist", "Unknown")
-        source = waifu_image.get("source", "")
         tags_str = ", ".join(waifu_image.get("tags", []))
         
         caption = (
             f"🎨 *Random Anime Image*\n\n"
-            f"👤 *Artist:* {artist}\n"
             f"🏷 *Tags:* {tags_str}\n"
             f"📐 *Resolution:* {waifu_image.get('width')}x{waifu_image.get('height')}"
         )
-        
-        if source:
-            caption += f"\n🔗 *Source:* [View on Pixiv]({source})"
         
         await loading_msg.edit_media(
             media=InputMediaPhoto(
@@ -1569,9 +1558,29 @@ async def post_shutdown(application):
     logger.info("Bot status set to offline.")
 
 
+def keep_alive():
+    """Background thread to ping the health endpoint and prevent Render from spinning down."""
+    logger.info(f"Keep-alive thread started. Pinging {KEEP_ALIVE_URL} every {KEEP_ALIVE_INTERVAL} seconds.")
+    while True:
+        time.sleep(KEEP_ALIVE_INTERVAL)
+        try:
+            response = requests.get(KEEP_ALIVE_URL, timeout=30)
+            if response.status_code == 200:
+                logger.debug(f"Keep-alive ping successful: {response.json()}")
+            else:
+                logger.warning(f"Keep-alive ping returned status {response.status_code}")
+        except Exception as e:
+            logger.warning(f"Keep-alive ping failed: {e}")
+
+
 def main():
     init_db()
     logger.info("DB initialised.")
+
+    # Start keep-alive thread for Render free tier
+    keep_alive_thread = threading.Thread(target=keep_alive, daemon=True)
+    keep_alive_thread.start()
+    logger.info("Keep-alive thread started.")
 
     # Run the Telegram bot in a background thread
     bot_thread = threading.Thread(target=run_bot, daemon=True)
