@@ -11,7 +11,7 @@ from urllib.parse import urljoin, parse_qs, quote, urlparse
 from flask import (Flask, request, jsonify, render_template, Response,
                    redirect, url_for, session, stream_with_context)
 from telegram import (Update, InlineKeyboardButton, InlineKeyboardMarkup,
-                      BotCommand, WebAppInfo)
+                      BotCommand, WebAppInfo, InputMediaPhoto)
 from telegram.ext import (Application, CommandHandler, CallbackQueryHandler,
                           MessageHandler, filters, ContextTypes)
 
@@ -22,6 +22,44 @@ from telegram.ext import (Application, CommandHandler, CallbackQueryHandler,
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN environment variable is not set.")
+
+# Waifu.im API configuration
+WAIFU_API_BASE = "https://api.waifu.im"
+WAIFU_TAGS = ["waifu", "anime", "cute", "maid", "uniform", "school", "catgirl", "foxgirl"]
+
+async def fetch_random_waifu_image(tags: list = None, nsfw: bool = False) -> dict:
+    """Fetch a random image from waifu.im API."""
+    try:
+        # Use only the first tag for better results (API uses AND logic for multiple tags)
+        primary_tag = tags[0] if tags else "waifu"
+        
+        params = {
+            "IsNsfw": "True" if nsfw else "False",
+            "PageSize": 1,
+            "IncludedTags": primary_tag,
+        }
+        
+        response = requests.get(
+            f"{WAIFU_API_BASE}/images",
+            params=params,
+            timeout=10
+        )
+        response.raise_for_status()
+        data = response.json()
+        
+        if data.get("items") and len(data["items"]) > 0:
+            item = data["items"][0]
+            return {
+                "url": item.get("url"),
+                "source": item.get("source"),
+                "artist": item.get("artists", [{}])[0].get("name") if item.get("artists") else "Unknown",
+                "tags": [tag.get("name") for tag in item.get("tags", [])],
+                "width": item.get("width"),
+                "height": item.get("height"),
+            }
+    except Exception as e:
+        logger.warning(f"Failed to fetch waifu image: {e}")
+    return None
 
 _admin_ids_raw = os.environ.get("ADMIN_IDS", "")
 ADMIN_IDS: set[int] = {int(x.strip()) for x in _admin_ids_raw.split(",") if x.strip().isdigit()}
@@ -956,35 +994,58 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name_md    = user.first_name or "there"
     webapp_url = get_webapp_url()
 
+    # Fetch a random waifu image for the welcome message
+    waifu_image = await fetch_random_waifu_image(tags=["waifu", "anime", "cute"], nsfw=False)
+
     # ── Channel membership gate (skip for admins) ──────────────
     if not admin_flag:
         if not check_telegram_channel_member(uid):
-            await update.message.reply_text(
+            welcome_text = (
                 f"👋 *Welcome to SelectionWay Bot, {name_md}!*\n\n"
                 f"📢 To access our courses and study content you must first join our official channel.\n\n"
-                f"👇 Join below, then tap *I've Joined* to continue:",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("📢 Join SelectionWay Channel", url=CHANNEL_JOIN_LINK)],
-                    [InlineKeyboardButton("✅ I've Joined — Check Now", callback_data="join:check")],
-                ]),
-                parse_mode="Markdown",
+                f"👇 Join below, then tap *I've Joined* to continue:"
             )
+            
+            if waifu_image and waifu_image.get("url"):
+                await update.message.reply_photo(
+                    photo=waifu_image["url"],
+                    caption=welcome_text,
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("📢 Join SelectionWay Channel", url=CHANNEL_JOIN_LINK)],
+                        [InlineKeyboardButton("✅ I've Joined — Check Now", callback_data="join:check")],
+                    ]),
+                    parse_mode="Markdown",
+                )
+            else:
+                await update.message.reply_text(
+                    welcome_text,
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("📢 Join SelectionWay Channel", url=CHANNEL_JOIN_LINK)],
+                        [InlineKeyboardButton("✅ I've Joined — Check Now", callback_data="join:check")],
+                    ]),
+                    parse_mode="Markdown",
+                )
             return
 
     if admin_flag:
         greeting = (
             f"👑 *Welcome back, Admin {name_md}!*\n\n"
-            f"You have full access to the bot and admin controls.\n"
-            f"Use /admin to open the admin panel."
+            f"✨ You have full access to the bot and admin controls.\n"
+            f"🛡 Use /admin to open the admin panel.\n\n"
+            f"📊 *Quick Stats:*\n"
+            f"  • Total Users: `{db_stats()['total']}`\n"
+            f"  • Active Today: `{db_stats()['today']}` fetches"
         )
     else:
         greeting = (
-            f"👋 *Hello, {name_md}!* Welcome to *SelectionWay Bot*\n\n"
-            f"Browse every SelectionWay batch, explore topics, and watch lectures right here in Telegram.\n\n"
-            f"📌 *How to use:*\n"
-            f"  • Tap *Open Course Browser* below to launch the Mini App\n"
-            f"  • Browse batches → topics → lectures → play video\n"
-            f"  • Or paste a batch link to get a full HTML file"
+            f"🌸 *Welcome to SelectionWay Bot, {name_md}!*\n\n"
+            f"📚 Your gateway to *SelectionWay* courses and lectures.\n"
+            f"✨ Browse batches, explore topics, and watch lectures seamlessly.\n\n"
+            f"📌 *How to get started:*\n"
+            f"  🔹 Tap **Open Course Browser** to launch the Mini App\n"
+            f"  🔹 Browse batches → topics → lectures → play video\n"
+            f"  🔹 Paste a batch link for instant access\n\n"
+            f"💡 *Tip:* Use the Mini App for the best viewing experience!"
         )
 
     kb_rows = [
@@ -992,17 +1053,41 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "📚 Open Course Browser",
             web_app=WebAppInfo(url=webapp_url)
         )],
+        [InlineKeyboardButton(
+            "🎯 Browse by Category",
+            web_app=WebAppInfo(url=f"{webapp_url}/#categories")
+        )],
+        [InlineKeyboardButton(
+            "📅 Live Schedule",
+            web_app=WebAppInfo(url=f"{webapp_url}/#live")
+        )],
     ]
     if admin_flag:
         kb_rows.append([InlineKeyboardButton("🛡 Admin Panel", callback_data="adm:menu")])
         kb_rows.append([InlineKeyboardButton("🌐 Web Admin Portal",
                                               web_app=WebAppInfo(url=f"{webapp_url}/admin"))])
 
-    await update.message.reply_text(
-        greeting,
-        reply_markup=InlineKeyboardMarkup(kb_rows),
-        parse_mode="Markdown",
-    )
+    # Send welcome message with waifu image if available
+    if waifu_image and waifu_image.get("url"):
+        # Add image credit to caption
+        artist = waifu_image.get("artist", "Unknown")
+        source = waifu_image.get("source", "")
+        credit = f"\n\n🎨 *Art by:* {artist}"
+        if source:
+            credit += f" | [Source]({source})"
+        
+        await update.message.reply_photo(
+            photo=waifu_image["url"],
+            caption=greeting + credit,
+            reply_markup=InlineKeyboardMarkup(kb_rows),
+            parse_mode="Markdown",
+        )
+    else:
+        await update.message.reply_text(
+            greeting,
+            reply_markup=InlineKeyboardMarkup(kb_rows),
+            parse_mode="Markdown",
+        )
 
 
 async def cmd_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1033,16 +1118,43 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if check_telegram_channel_member(uid):
             webapp_url = get_webapp_url()
             name_md = query.from_user.first_name or "there"
-            await query.message.edit_text(
+            
+            # Fetch a waifu image for the success message
+            waifu_image = await fetch_random_waifu_image(tags=["waifu", "anime", "cute"], nsfw=False)
+            
+            success_text = (
                 f"✅ *You're all set, {name_md}!*\n\n"
-                f"Welcome to SelectionWay Bot.\n"
-                f"Browse all our courses and study materials below:",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("📚 Open Course Browser",
-                                          web_app=WebAppInfo(url=webapp_url))],
-                ]),
-                parse_mode="Markdown",
+                f"🎉 Welcome to SelectionWay Bot.\n"
+                f"📚 Browse all our courses and study materials below:"
             )
+            
+            if waifu_image and waifu_image.get("url"):
+                artist = waifu_image.get("artist", "Unknown")
+                source = waifu_image.get("source", "")
+                credit = f"\n\n🎨 *Art by:* {artist}"
+                if source:
+                    credit += f" | [Source]({source})"
+                
+                await query.message.edit_media(
+                    media=InputMediaPhoto(
+                        media=waifu_image["url"],
+                        caption=success_text + credit,
+                        parse_mode="Markdown"
+                    ),
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("📚 Open Course Browser",
+                                              web_app=WebAppInfo(url=webapp_url))],
+                    ]),
+                )
+            else:
+                await query.message.edit_text(
+                    success_text,
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("📚 Open Course Browser",
+                                              web_app=WebAppInfo(url=webapp_url))],
+                    ]),
+                    parse_mode="Markdown",
+                )
         else:
             await query.answer(
                 "❌ You haven't joined yet!\n\nPlease join the channel first, then tap the button again.",
@@ -1248,10 +1360,104 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show help message with all available commands."""
+    user = update.effective_user
+    uid = user.id
+    admin_flag = is_admin(uid)
+    
+    waifu_image = await fetch_random_waifu_image(tags=["waifu", "anime", "cute"], nsfw=False)
+    
+    help_text = (
+        f"📖 *SelectionWay Bot - Help*\n\n"
+        f"🤖 *Available Commands:*\n"
+        f"  /start — Launch the bot and open Course Browser\n"
+        f"  /waifu — Get a random anime image\n"
+        f"  /help — Show this help message\n"
+    )
+    
+    if admin_flag:
+        help_text += (
+            f"\n👑 *Admin Commands:*\n"
+            f"  /admin — Open admin panel\n"
+        )
+    
+    help_text += (
+        f"\n📚 *Features:*\n"
+        f"  • Browse all SelectionWay batches\n"
+        f"  • Watch lectures in Mini App\n"
+        f"  • Get batch info by pasting links\n"
+        f"  • Live class notifications\n"
+        f"  • Rate limiting & user management\n\n"
+        f"💡 *Tip:* Use the Mini App for the best experience!\n"
+        f"🔗 *Channel:* [Join SelectionWay]({CHANNEL_JOIN_LINK})"
+    )
+    
+    if waifu_image and waifu_image.get("url"):
+        artist = waifu_image.get("artist", "Unknown")
+        source = waifu_image.get("source", "")
+        credit = f"\n\n🎨 *Art by:* {artist}"
+        if source:
+            credit += f" | [Source]({source})"
+        
+        await update.message.reply_photo(
+            photo=waifu_image["url"],
+            caption=help_text + credit,
+            parse_mode="Markdown",
+        )
+    else:
+        await update.message.reply_text(
+            help_text,
+            parse_mode="Markdown",
+        )
+
+
+async def cmd_waifu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Get a random anime image from waifu.im"""
+    # Parse optional tags from command arguments
+    args = context.args
+    tags = args if args else ["waifu", "anime", "cute"]
+    
+    # Send loading message
+    loading_msg = await update.message.reply_text("🎨 Fetching a random anime image...")
+    
+    waifu_image = await fetch_random_waifu_image(tags=tags, nsfw=False)
+    
+    if waifu_image and waifu_image.get("url"):
+        artist = waifu_image.get("artist", "Unknown")
+        source = waifu_image.get("source", "")
+        tags_str = ", ".join(waifu_image.get("tags", []))
+        
+        caption = (
+            f"🎨 *Random Anime Image*\n\n"
+            f"👤 *Artist:* {artist}\n"
+            f"🏷 *Tags:* {tags_str}\n"
+            f"📐 *Resolution:* {waifu_image.get('width')}x{waifu_image.get('height')}"
+        )
+        
+        if source:
+            caption += f"\n🔗 *Source:* [View on Pixiv]({source})"
+        
+        await loading_msg.edit_media(
+            media=InputMediaPhoto(
+                media=waifu_image["url"],
+                caption=caption,
+                parse_mode="Markdown"
+            )
+        )
+    else:
+        await loading_msg.edit_text(
+            "❌ Failed to fetch image. Please try again later.",
+            parse_mode="Markdown"
+        )
+
+
 async def post_init(application):
     commands = [
         BotCommand("start", "Browse all batches & launch Mini App"),
         BotCommand("admin", "Admin panel (admins only)"),
+        BotCommand("waifu", "Get a random anime image"),
+        BotCommand("help", "Show help and commands"),
     ]
     await application.bot.set_my_commands(commands)
     
@@ -1337,6 +1543,8 @@ def run_bot():
     )
     application.add_handler(CommandHandler("start", cmd_start))
     application.add_handler(CommandHandler("admin", cmd_admin))
+    application.add_handler(CommandHandler("waifu", cmd_waifu))
+    application.add_handler(CommandHandler("help", cmd_help))
     application.add_handler(CallbackQueryHandler(button_handler))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
