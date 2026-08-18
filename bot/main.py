@@ -250,6 +250,9 @@ def check_rate_limit(user_id: int):
 # SelectionWay API
 # ─────────────────────────────────────────────────────────────────
 
+# Forced thumbnail URL for all topics, chapters, and lecture videos
+FORCED_THUMBNAIL_URL = "https://i.pinimg.com/736x/18/75/01/18750180cc2f14a2a18493ae12b000cd.jpg"
+
 BASE_HEADERS = {
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
     "content-type": "application/json",
@@ -407,7 +410,7 @@ def build_classes_data(classes_data, batch_meta: dict):
 
     pdf_url = clean_url(batch_meta.get('batchInfoPdfUrl', ''))
     if pdf_url:
-        pdf_links.append({"name": "Batch Info PDF", "url": pdf_url, "topic": "Batch Info"})
+        pdf_links.append({"name": "Batch Info PDF", "url": pdf_url, "topic": "Batch Info", "thumb": FORCED_THUMBNAIL_URL})
 
     if classes_data and "classes" in classes_data:
         for topic_group in classes_data["classes"]:
@@ -468,6 +471,7 @@ def build_classes_data(classes_data, batch_meta: dict):
                     "raw_url":  class_link,
                     "live":     live_now,
                     "playable": video_type in ("mp4", "youtube", "hls"),
+                    "thumb":    FORCED_THUMBNAIL_URL,
                 })
 
                 class_pdfs = []
@@ -475,7 +479,7 @@ def build_classes_data(classes_data, batch_meta: dict):
                     pdf_name = pdf.get("name") or title
                     pdf_url_item = pdf.get("url")
                     if pdf_url_item:
-                        entry = {"name": pdf_name, "url": pdf_url_item, "topic": topic_name}
+                        entry = {"name": pdf_name, "url": pdf_url_item, "topic": topic_name, "thumb": FORCED_THUMBNAIL_URL}
                         pdf_links.append(entry)
                         class_pdfs.append(entry)
 
@@ -483,7 +487,7 @@ def build_classes_data(classes_data, batch_meta: dict):
                 for test in class_item.get("classTest", []) or []:
                     test_name = test.get("name") or test.get("title") or title
                     test_url  = test.get("url") or test.get("link")
-                    entry = {"name": test_name, "url": test_url, "topic": topic_name}
+                    entry = {"name": test_name, "url": test_url, "topic": topic_name, "thumb": FORCED_THUMBNAIL_URL}
                     test_links.append(entry)
                     class_tests.append(entry)
 
@@ -514,6 +518,7 @@ def build_classes_data(classes_data, batch_meta: dict):
                     "name":    topic_name,
                     "teacher": topic_teacher,
                     "classes": topic_classes,
+                    "thumb":   FORCED_THUMBNAIL_URL,
                 })
 
     return {
@@ -713,9 +718,8 @@ def api_batches():
     slim = []
     for b in sorted_data:
         cat = (b.get("mainCategory") or {}).get("mainCategoryName", "")
-        thumb = (b.get("banner") or b.get("bannerSquare") or
-                 b.get("bannerLandscape") or b.get("thumbnail") or
-                 b.get("image") or b.get("coverImage") or b.get("photo") or "")
+        # Force the specific thumbnail URL for all batches
+        thumb = FORCED_THUMBNAIL_URL
         live_now = is_batch_live_now(b)
         slim.append({
             "id":          b.get("id"),
@@ -750,9 +754,8 @@ def api_batch_classes(batch_id):
 
     result = build_classes_data(classes_data, batch_meta)
 
-    thumb = (batch_meta.get("banner") or batch_meta.get("bannerSquare") or
-             batch_meta.get("bannerLandscape") or batch_meta.get("thumbnail") or
-             batch_meta.get("image") or batch_meta.get("coverImage") or batch_meta.get("photo") or "")
+    # Force the specific thumbnail URL for batch meta
+    thumb = FORCED_THUMBNAIL_URL
 
     cat = (batch_meta.get("mainCategory") or {}).get("mainCategoryName", "")
     desc_items = batch_meta.get("description") or []
@@ -772,6 +775,14 @@ def api_batch_classes(batch_id):
         "description": desc_items[:6],
         "highlights":  highlights[:5],
     }
+
+    # Force thumbnail on all topics
+    for topic in result.get("topics", []):
+        topic["thumb"] = FORCED_THUMBNAIL_URL
+
+    # Force thumbnail on all video links (lecture videos)
+    for video in result.get("video_links", []):
+        video["thumb"] = FORCED_THUMBNAIL_URL
 
     return jsonify(result)
 
